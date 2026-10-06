@@ -7,6 +7,11 @@ services:
     # Necesario para el UDP con el GoodWe y para llegar a OMV/AdGuard por localhost.
     # El puerto de la web es server.port de config.yaml.
     network_mode: host
+    # Secretos referenciados en config.yaml como ${VAR}. En local: fichero .env
+    # junto a este compose; en Portainer: variables de entorno del stack.
+    environment:
+      OMV_PASSWORD: ${OMV_PASSWORD:-}
+      ADGUARD_PASSWORD: ${ADGUARD_PASSWORD:-}
     volumes:
       # Ruta absoluta en el NAS (p. ej. desde Portainer); por defecto, junto a este fichero.
       - ${CONFIG_FILE:-./config.yaml}:/app/config.yaml:ro

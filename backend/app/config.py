@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -169,11 +170,38 @@ class AppConfig(_Section):
     news: NewsConfig | None = None
 
 
+_ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+# Variables referenciadas en config.yaml que no estaban definidas (se loguean al arrancar).
+MISSING_ENV: set[str] = set()
+
+
+def expand_env(value: Any, missing: set[str]) -> Any:
+    """Sustituye ``${VAR}`` por la variable de entorno, para no escribir secretos
+    en config.yaml. Una variable ausente se deja vacía y se anota en ``missing``:
+    fallará solo el módulo que la usa, no el arranque."""
+    if isinstance(value, dict):
+        return {k: expand_env(v, missing) for k, v in value.items()}
+    if isinstance(value, list):
+        return [expand_env(v, missing) for v in value]
+    if isinstance(value, str):
+
+        def resolve(match: re.Match[str]) -> str:
+            name = match.group(1)
+            if not os.environ.get(name):
+                missing.add(name)
+            return os.environ.get(name, "")
+
+        return _ENV_REF.sub(resolve, value)
+    return value
+
+
 def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
     config_path = Path(path or os.environ.get("CONFIG_PATH", "config.yaml"))
     with config_path.open("r", encoding="utf-8") as fh:
         raw = yaml.safe_load(fh) or {}
-    return AppConfig.model_validate(raw)
+    MISSING_ENV.clear()
+    return AppConfig.model_validate(expand_env(raw, MISSING_ENV))
 
 
 @lru_cache(maxsize=1)

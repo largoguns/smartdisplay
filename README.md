@@ -48,12 +48,13 @@ La configuración real vive en `config.yaml`, que **no está en el repositorio**
    - Repository URL: `https://github.com/largoguns/smartdisplay`
    - Reference: `refs/heads/main`
    - Compose path: `docker-compose.yml`
-   - **Environment variables:** `CONFIG_FILE` = `/srv/smartdisplay/config.yaml`
+   - **Environment variables:** `CONFIG_FILE` = `/srv/smartdisplay/config.yaml`, más los secretos de [Secretos fuera de config.yaml](#secretos-fuera-de-configyaml) (`OMV_PASSWORD`, `ADGUARD_PASSWORD`)
 3. **Deploy the stack.** La primera vez construye la imagen (unos minutos).
 
 | Acción | Cómo |
 |---|---|
 | Aplicar cambios de `config.yaml` | Reiniciar el contenedor `kitchen-dashboard` |
+| Cambiar secretos (`OMV_PASSWORD`...) | Editar las variables del stack → **Update the stack** |
 | Actualizar a la última versión | En el stack: **Pull and redeploy** (con *Re-pull image and redeploy* activado) |
 | Ver logs | Contenedor `kitchen-dashboard` → Logs |
 
@@ -64,12 +65,14 @@ Si `CONFIG_FILE` apunta a un fichero que no existe, Docker crea un **directorio*
 ```bash
 git clone https://github.com/largoguns/smartdisplay.git && cd smartdisplay
 cp config.example.yaml config.yaml && chmod 600 config.yaml   # y rellenarlo
+cp .env.example .env && chmod 600 .env                         # contraseñas de OMV y AdGuard
 docker compose up -d --build
 ```
 
 | Acción | Comando |
 |---|---|
 | Aplicar cambios de `config.yaml` | `docker compose restart` |
+| Aplicar cambios de `.env` | `docker compose up -d` (**no** `restart`: reutiliza las variables antiguas) |
 | Actualizar el código | `git pull && docker compose up -d --build` |
 | Ver logs | `docker compose logs -f` |
 
@@ -80,6 +83,22 @@ El dashboard queda en `http://<IP_NAS>:3000` (`server.port`). **Si AdGuard Home 
 ## Configuración
 
 Todo está en `config.yaml` (plantilla: [config.example.yaml](config.example.yaml)). Una sección ausente o con `enabled: false` desactiva el módulo y su tarjeta.
+
+### Secretos fuera de config.yaml
+
+Cualquier valor de `config.yaml` puede escribirse como `${VARIABLE}` y se sustituye al arrancar por esa variable de entorno. La plantilla lo usa para las contraseñas de OMV y AdGuard, que sus APIs exigen en claro:
+
+```yaml
+omv:
+  password: "${OMV_PASSWORD}"
+adguard:
+  password: "${ADGUARD_PASSWORD}"
+```
+
+- **En local:** fichero `.env` junto a `docker-compose.yml` (plantilla en [.env.example](.env.example); está en `.gitignore`).
+- **En Portainer:** como *Environment variables* del stack.
+- Si una variable no está definida, el arranque lo avisa en el log y solo falla el módulo que la usa.
+- Para añadir otra, referénciala en `config.yaml` y añádela a `environment:` en [docker-compose.yml](docker-compose.yml).
 
 ### Servidor
 
@@ -209,17 +228,35 @@ Si suena una sola cuenta se muestra esa; si suenan varias, la que use un disposi
 
 ```yaml
 omv:
-  url: "http://127.0.0.1:80"
+  url: "http://<IP_NAS>:80"
   username: "admin"
-  password: "..."
+  password: "${OMV_PASSWORD}"
   exclude_mount_points: ["/", "/boot", "/boot/efi"]
 adguard:
-  url: "http://127.0.0.1:3000"   # ojo: mismo puerto que el dashboard por defecto
-  username: "admin"
-  password: "..."
+  url: "http://<IP_NAS>:<puerto_web_adguard>"
+  username: "dashboard"
+  password: "${ADGUARD_PASSWORD}"
 ```
 
-La píldora del NAS se pone en ámbar con algún disco ≥ 90 % o la RAM ≥ 95 %.
+- Con la IP del NAS la misma configuración sirve en local y desplegada. Para encontrar el puerto web de AdGuard: su API responde `401` en `http://<host>:<puerto>/control/status`.
+- La píldora del NAS se pone en ámbar con algún disco ≥ 90 % o la RAM ≥ 95 %.
+
+**Usuario dedicado para AdGuard.** Así la contraseña que usa el dashboard no es la tuya. AdGuard no tiene usuarios de solo lectura (todos son administradores), pero si esta se filtra basta con borrar el usuario.
+
+1. Genera una contraseña aleatoria y su hash bcrypt:
+   ```bash
+   PASS=$(openssl rand -base64 24); echo "$PASS"     # va a ADGUARD_PASSWORD
+   docker run --rm httpd:alpine htpasswd -nbB dashboard "$PASS" | cut -d: -f2
+   ```
+2. Para AdGuard Home y edita su `AdGuardHome.yaml` (en Docker, en el volumen de `conf/`). Añade el usuario a la lista existente:
+   ```yaml
+   users:
+     - name: admin            # el tuyo, sin tocar
+       password: $2y$...
+     - name: dashboard
+       password: $2y$...      # el hash del paso 1
+   ```
+3. Arranca AdGuard y pon la contraseña del paso 1 en `ADGUARD_PASSWORD`.
 
 ### Noticias (`news`)
 
@@ -321,6 +358,7 @@ Respuestas: `200` con `"status": "ok"` o `"stale"`; `503` si el módulo aún no 
 
 | Script | Para qué | Cómo se ejecuta |
 |---|---|---|
+| `.env.example` | Plantilla de los secretos por variable de entorno | `cp .env.example .env` |
 | `scripts/rpi-kiosk.sh` | Arranque del dispositivo cliente en modo kiosko | en el cliente |
 | `scripts/goodwe_probe.py` | Localizar el inversor y ver qué datos expone | `docker compose run --rm -v "$PWD/scripts:/scripts:ro" dashboard python /scripts/goodwe_probe.py [IP ...]` |
 | `scripts/sems_hash.py` | Hash de la contraseña de SEMS para `password_hash` | `python3 scripts/sems_hash.py` |
@@ -332,7 +370,7 @@ Los que se ejecutan con `python3` solo usan la librería estándar; los que van 
 
 ## Seguridad
 
-`config.yaml` contiene credenciales: URLs secretas de calendario, master token de Google, hash de SEMS, contraseñas de OMV/AdGuard y tokens de Spotify.
+`config.yaml` contiene credenciales: URLs secretas de calendario, master token de Google, hash de SEMS y tokens de Spotify. Las contraseñas de OMV y AdGuard van aparte, en variables de entorno (`.env` o el stack de Portainer).
 
 - Está en `.gitignore`: **nunca lo subas al repositorio** (es público). Déjalo con `chmod 600`.
 - Está montado en el contenedor en solo lectura.
@@ -342,6 +380,7 @@ Los que se ejecutan con `python3` solo usan la librería estándar; los que van 
 
 | Síntoma | Causa probable |
 |---|---|
+| Módulo con `401`/"Incorrect username or password" tras editar `.env` | Se usó `docker compose restart`: las variables no se releen. Usa `docker compose up -d`. |
 | `502`/página en blanco justo tras reiniciar | El backend tarda unos segundos en arrancar; las tarjetas reintentan cada 5 s. |
 | El contenedor no arranca (`address already in use`) | Otro servicio usa `server.port` (p. ej. AdGuard en el 3000). |
 | Energía solar "Sin actualizar" | Inversor apagado (de noche sin SEMS), IP cambiada, o el equipo que ejecuta el contenedor no llega a la LAN (p. ej. una VPN corporativa que enruta esa subred). |
@@ -351,6 +390,8 @@ Los que se ejecutan con `python3` solo usan la librería estándar; los que van 
 | `spotify_auth.py`: puerto ocupado | Usa `--port` con otro libre y añade su Redirect URI en Spotify. |
 
 ## Desarrollo
+
+Normas de contribución y formato de commits (Conventional Commits): [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 # Backend (escucha en server.port)

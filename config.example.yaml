@@ -68,7 +68,7 @@ omv:
   enabled: true
   url: "http://127.0.0.1:80"
   username: "admin"
-  password: "omv_admin_password"
+  password: "${OMV_PASSWORD}"      # variable de entorno (.env en local, stack en Portainer)
   poll_interval_seconds: 60
   exclude_mount_points: ["/", "/boot", "/boot/efi"]
 
@@ -76,8 +76,8 @@ omv:
 adguard:
   enabled: true
   url: "http://127.0.0.1:3000"
-  username: "admin"
-  password: "adguard_password"
+  username: "dashboard"            # usuario dedicado (ver README)
+  password: "${ADGUARD_PASSWORD}"  # variable de entorno (.env en local, stack en Portainer)
   poll_interval_seconds: 300
 
 # 7. Spotify (varias cuentas). Refresh tokens: scripts/spotify_auth.py

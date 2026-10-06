@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
-from .config import AppConfig, get_config
+from .config import MISSING_ENV, AppConfig, get_config
 from .modules.adguard import AdguardModule
 from .modules.base import PollingModule
 from .modules.calendar import CalendarModule
@@ -110,6 +110,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     for module in modules.values():
         module.start()
     log.info("Módulos activos: %s", ", ".join(modules) or "ninguno")
+    if MISSING_ENV:
+        log.warning("Variables de entorno usadas en config.yaml sin definir: %s", ", ".join(sorted(MISSING_ENV)))
     try:
         yield
     finally:
