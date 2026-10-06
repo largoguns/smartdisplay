@@ -1,0 +1,106 @@
+# Plantilla de configuración. Cópiala a config.yaml y rellénala:
+#   cp config.example.yaml config.yaml && chmod 600 config.yaml
+# config.yaml contiene credenciales: está en .gitignore y no debe subirse nunca.
+# Una sección ausente o con enabled: false desactiva el módulo. Detalles en README.md.
+
+server:
+  host: "0.0.0.0"
+  port: 3000                      # Web + API. Cámbialo si AdGuard Home ya usa el 3000 en el NAS
+  timezone: "Europe/Madrid"
+  log_level: "INFO"
+
+# 1. Inversor fotovoltaico GoodWe (UDP en la LAN)
+inverter:
+  enabled: true
+  ip_address: "192.168.1.150"     # localízalo con scripts/goodwe_probe.py
+  # family: "DT"                  # opcional (ET, ES, DT...). Por defecto autodetección
+  poll_interval_seconds: 10
+
+# 1b. Nube de GoodWe (SEMS+): consumo del hogar y red medidos por el HomeKit,
+#     para inversores sin medidor. La producción sigue siendo local.
+sems:
+  enabled: false                  # actívalo tras poner el hash (evita logins fallidos)
+  username: "tu_email@ejemplo.com"
+  # Hash de la contraseña (no la contraseña): python3 scripts/sems_hash.py
+  password_hash: "PEGA_AQUI_EL_HASH"
+  station_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  poll_interval_seconds: 60       # SEMS solo publica una lectura cada ~2 min
+  max_age_minutes: 15             # lecturas más antiguas no se muestran
+
+# 2. El tiempo (Open-Meteo, sin API key)
+weather:
+  enabled: true
+  update_interval_minutes: 15
+  # La primera ubicación es la principal (widget completo); el resto se
+  # muestran como tarjetas compactas debajo.
+  locations:
+    - name: "Casa"
+      latitude: 40.4168
+      longitude: -3.7038
+    # - name: "Otra ciudad"
+    #   latitude: 41.3874
+    #   longitude: 2.1686
+
+# 3. Calendarios de Google ("Dirección secreta en formato iCal")
+calendars:
+  enabled: true
+  update_interval_minutes: 10
+  days_ahead: 21                  # hoy + 3 semanas
+  sources:
+    - name: "Personal"
+      color: "#38bdf8"
+      ics_url: "https://calendar.google.com/calendar/ical/.../basic.ics"
+    - name: "Familia"
+      color: "#34d399"
+      ics_url: "https://calendar.google.com/calendar/ical/.../basic.ics"
+
+# 4. Lista de la compra (Google Keep)
+keep:
+  enabled: true
+  username: "tu_cuenta@gmail.com"
+  master_token: "aas_et/..."      # scripts/keep_token.py
+  target_list_title: "La Compra"  # sin distinguir mayúsculas; se ignoran las archivadas si hay otra
+  completed_items_shown: 0        # elementos ya marcados a mostrar (0 = solo pendientes)
+  poll_interval_seconds: 300
+
+# 5. NAS (OpenMediaVault)
+omv:
+  enabled: true
+  url: "http://127.0.0.1:80"
+  username: "admin"
+  password: "omv_admin_password"
+  poll_interval_seconds: 60
+  exclude_mount_points: ["/", "/boot", "/boot/efi"]
+
+# 6. AdGuard Home
+adguard:
+  enabled: true
+  url: "http://127.0.0.1:3000"
+  username: "admin"
+  password: "adguard_password"
+  poll_interval_seconds: 300
+
+# 7. Spotify (varias cuentas). Refresh tokens: scripts/spotify_auth.py
+spotify:
+  enabled: true
+  client_id: "TU_SPOTIFY_CLIENT_ID"
+  client_secret: "TU_SPOTIFY_CLIENT_SECRET"
+  poll_interval_seconds: 5
+  accounts:
+    - name: "Cuenta 1"
+      refresh_token: "REFRESH_TOKEN_CUENTA_1"
+    # - name: "Cuenta 2"
+    #   refresh_token: "REFRESH_TOKEN_CUENTA_2"
+  preferred_devices:              # desempate si suenan varias cuentas
+    - "Google Home Cocina"
+
+# 8. Noticias RSS/Atom
+news:
+  enabled: true
+  update_interval_minutes: 30
+  ticker_speed_seconds: 15
+  feeds:
+    - name: "El País"
+      url: "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada"
+    - name: "Xataka"
+      url: "https://feeds.weblogssl.com/xataka2"

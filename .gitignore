@@ -1,0 +1,9 @@
+# Configuración real: contiene credenciales. Plantilla en config.example.yaml.
+config.yaml
+
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

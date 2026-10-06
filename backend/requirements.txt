@@ -1,0 +1,11 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30
+httpx>=0.27
+pydantic>=2.7,<3
+PyYAML>=6.0
+goodwe>=0.2.14
+icalendar>=5.0
+recurring-ical-events>=2.2
+feedparser>=6.0.11
+gkeepapi>=0.16
+tzdata>=2024.1

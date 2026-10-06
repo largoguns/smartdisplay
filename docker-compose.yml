@@ -1,0 +1,12 @@
+services:
+  dashboard:
+    build: .
+    image: smartdisplay:latest
+    container_name: kitchen-dashboard
+    restart: unless-stopped
+    # Necesario para el UDP con el GoodWe y para llegar a OMV/AdGuard por localhost.
+    # El puerto de la web es server.port de config.yaml.
+    network_mode: host
+    volumes:
+      # Ruta absoluta en el NAS (p. ej. desde Portainer); por defecto, junto a este fichero.
+      - ${CONFIG_FILE:-./config.yaml}:/app/config.yaml:ro

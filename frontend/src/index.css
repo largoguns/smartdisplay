@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-slate-950 font-sans text-slate-100 antialiased;
+    /* Halos de color tenues detrás de las tarjetas translúcidas. */
+    background-image:
+      radial-gradient(60rem 40rem at 10% 20%, rgb(245 158 11 / 0.07), transparent 70%),
+      radial-gradient(50rem 40rem at 90% 10%, rgb(56 189 248 / 0.07), transparent 70%),
+      radial-gradient(60rem 40rem at 60% 100%, rgb(16 185 129 / 0.06), transparent 70%);
+  }
+
+  /* Kiosko: nunca scrollbars. */
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Flechas de flujo del SolarFlowWidget. */
+@keyframes power-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.power-flow {
+  stroke-dasharray: 4 10;
+  animation: power-flow linear infinite;
+}
+
+.power-flow-reverse {
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-flow {
+    animation: none;
+  }
+}
