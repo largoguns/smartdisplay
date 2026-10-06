@@ -75,17 +75,6 @@ class WeatherConfig(_Section):
     update_interval_minutes: float = Field(default=15, gt=0)
     locations: list[WeatherLocation] = Field(min_length=1)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _legacy_single_location(cls, data: Any) -> Any:
-        # Formato antiguo: latitude/longitude directamente en la sección.
-        if isinstance(data, dict) and "latitude" in data and "locations" not in data:
-            data = dict(data)
-            data["locations"] = [
-                {"name": data.pop("name", "Mi ciudad"), "latitude": data.pop("latitude"), "longitude": data.pop("longitude")}
-            ]
-        return data
-
 
 class CalendarSource(_Section):
     name: str

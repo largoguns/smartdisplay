@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -254,11 +254,11 @@ def test_api_serves_stale_data_on_failure(monkeypatch: pytest.MonkeyPatch) -> No
         assert client.get("/api/health").json()["modules"]["adguard"]["last_error"] == "ConnectionError: down"
 
 
-def test_weather_config_accepts_legacy_and_multiple_locations() -> None:
+def test_weather_config_accepts_multiple_locations() -> None:
     from app.config import WeatherConfig
 
-    legacy = WeatherConfig.model_validate({"latitude": 40.4, "longitude": -3.7})
-    assert [(l.name, l.latitude) for l in legacy.locations] == [("Mi ciudad", 40.4)]
+    with pytest.raises(ValueError):
+        WeatherConfig.model_validate({"locations": []})  # al menos una ubicación
 
     multi = WeatherConfig.model_validate(
         {"locations": [{"name": "Casa", "latitude": 37.5, "longitude": -6.1}, {"name": "Madrid", "latitude": 40.4, "longitude": -3.7}]}
