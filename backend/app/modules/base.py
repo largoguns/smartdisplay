@@ -20,6 +20,25 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# Tras unas credenciales rechazadas no se reintenta pronto: muchos servicios
+# (OMV con pam_faillock, Google, SEMS) bloquean la cuenta tras varios fallos.
+AUTH_RETRY_SECONDS = 15 * 60
+
+
+class CredentialsError(Exception):
+    """Credenciales vacías o rechazadas. Se reintenta tras ``AUTH_RETRY_SECONDS``."""
+
+    retry_after = AUTH_RETRY_SECONDS
+
+
+def require_secret(value: str | None, name: str) -> str:
+    """Evita contactar con el servicio si el secreto está vacío (p. ej. una
+    variable ``${VAR}`` sin definir): un login vacío cuenta como intento fallido."""
+    if not value:
+        raise CredentialsError(f"'{name}' está vacío: revisa config.yaml o la variable de entorno")
+    return value
+
+
 class PollingModule(Generic[T]):
     """Ejecuta ``fetch()`` cada ``interval`` segundos.
 
@@ -82,7 +101,7 @@ class PollingModule(Generic[T]):
             self.log.log(level, "Actualización fallida: %s", self._last_error, exc_info=self.log.isEnabledFor(logging.DEBUG))
             self._failing = True
             await self._notify()
-            return self.retry
+            return max(self.retry, getattr(exc, "retry_after", 0))
 
         if self._failing:
             self.log.info("Servicio recuperado")

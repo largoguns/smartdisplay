@@ -11,7 +11,7 @@ from gkeepapi.node import List as KeepList
 
 from ..config import KeepConfig
 from ..schemas.models import ShoppingItem, ShoppingList
-from .base import PollingModule, utcnow
+from .base import CredentialsError, PollingModule, utcnow
 
 
 def _aware(value: datetime | None) -> datetime | None:
@@ -40,12 +40,15 @@ class KeepModule(PollingModule[ShoppingList]):
         token = self._cfg.master_token
         if token is None and self._cfg.password and self._cfg.password.startswith("aas_et/"):
             token = self._cfg.password
-        if token:
-            keep.authenticate(self._cfg.username, token)
-        elif self._cfg.password:
-            keep.login(self._cfg.username, self._cfg.password)
-        else:
-            raise ValueError("keep: se requiere 'password' o 'master_token'")
+        try:
+            if token:
+                keep.authenticate(self._cfg.username, token)
+            elif self._cfg.password:
+                keep.login(self._cfg.username, self._cfg.password)
+            else:
+                raise CredentialsError("keep: se requiere 'master_token' (o 'password')")
+        except gkeepapi.exception.LoginException as exc:
+            raise CredentialsError(f"Google rechazó el login de Keep: {exc}") from exc
         self.log.info("Sesión de Google Keep iniciada")
         return keep
 

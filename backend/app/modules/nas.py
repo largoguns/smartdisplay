@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+from collections import deque
 from typing import Any
 
 import httpx
 
 from ..config import OmvConfig
 from ..schemas.models import NasCpu, NasMemory, NasStatus, NasVolume
-from .base import PollingModule, utcnow
+from .base import CredentialsError, PollingModule, require_secret, utcnow
 
 GB = 1024**3
 DEGRADED_STORAGE_PERCENT = 90.0
 DEGRADED_MEMORY_PERCENT = 95.0
+CPU_SMOOTHING_SAMPLES = 3
 
 
 class OmvRpcError(Exception):
@@ -38,7 +40,10 @@ def parse_system_info(info: Any) -> tuple[NasCpu, NasMemory, str | None, int | N
     if isinstance(info, list):
         info = {entry.get("name"): entry.get("value") for entry in info if isinstance(entry, dict)}
 
-    cpu = _float(info.get("cpuUsage")) or 0.0
+    # OMV 8 lo llama cpuUtilization; versiones anteriores, cpuUsage.
+    cpu = _float(info.get("cpuUtilization"))
+    if cpu is None:
+        cpu = _float(info.get("cpuUsage")) or 0.0
     total = _float(info.get("memTotal")) or 0.0
     available = _float(info.get("memAvailable"))
     used = total - available if available is not None else (_float(info.get("memUsed")) or 0.0)
@@ -58,6 +63,19 @@ def parse_system_info(info: Any) -> tuple[NasCpu, NasMemory, str | None, int | N
     )
 
 
+def _volume_label(fs: dict[str, Any], mount_point: str) -> str:
+    """Etiqueta del volumen o, si no tiene, el dispositivo corto (/dev/sdb1).
+    ``description`` es "/dev/sdb1 [EXT4, 514 GiB ...]" y ``devicefile`` suele ser
+    la ruta by-uuid, ninguno legible en pantalla."""
+    if fs.get("label"):
+        return str(fs["label"])
+    for key in ("canonicaldevicefile", "description", "devicefile"):
+        value = str(fs.get(key) or "").split(" [")[0].strip()
+        if value:
+            return value
+    return mount_point
+
+
 def parse_filesystems(response: Any, exclude: list[str]) -> list[NasVolume]:
     rows = response.get("data", []) if isinstance(response, dict) else response or []
     volumes: list[NasVolume] = []
@@ -74,7 +92,7 @@ def parse_filesystems(response: Any, exclude: list[str]) -> list[NasVolume]:
         volumes.append(
             NasVolume(
                 mount_point=mount_point,
-                label=fs.get("label") or fs.get("description") or fs.get("devicefile") or mount_point,
+                label=_volume_label(fs, mount_point),
                 total_gb=round(size / GB, 1),
                 used_gb=round(used / GB, 1),
                 percent=round(percent if percent is not None else used / size * 100, 1),
@@ -92,6 +110,9 @@ class NasModule(PollingModule[NasStatus]):
         # Cliente propio: su cookie jar guarda la sesión de OMV.
         self._client = httpx.AsyncClient(base_url=cfg.url.rstrip("/"), timeout=15)
         self._logged_in = False
+        # La CPU de OMV es instantánea y muy variable (incluye el pico de la propia
+        # consulta): se muestra la media de las últimas lecturas.
+        self._cpu_samples: deque[float] = deque(maxlen=CPU_SMOOTHING_SAMPLES)
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -115,10 +136,15 @@ class NasModule(PollingModule[NasStatus]):
         return body.get("response")
 
     async def _login(self) -> None:
+        password = require_secret(self._cfg.password, "omv.password")
         self._client.cookies.clear()
-        result = await self._rpc("Session", "login", {"username": self._cfg.username, "password": self._cfg.password})
+        try:
+            result = await self._rpc("Session", "login", {"username": self._cfg.username, "password": password})
+        except OmvRpcError as exc:
+            # OMV responde a un login fallido con code 0 "Incorrect username or password".
+            raise CredentialsError(f"OMV rechazó el login: {exc}") from exc
         if isinstance(result, dict) and result.get("authenticated") is False:
-            raise OmvRpcError(5001, "Credenciales de OMV rechazadas")
+            raise CredentialsError("OMV rechazó el login")
         self._logged_in = True
 
     async def _call(self, service: str, method: str, params: dict[str, Any] | None = None) -> Any:
@@ -138,6 +164,8 @@ class NasModule(PollingModule[NasStatus]):
         filesystems = await self._call("FileSystemMgmt", "getList", {"start": 0, "limit": -1})
 
         cpu, memory, hostname, uptime = parse_system_info(info)
+        self._cpu_samples.append(cpu.usage_percent)
+        cpu = NasCpu(usage_percent=round(sum(self._cpu_samples) / len(self._cpu_samples), 1))
         storage = parse_filesystems(filesystems, self._cfg.exclude_mount_points)
         degraded = memory.percent >= DEGRADED_MEMORY_PERCENT or any(
             v.percent >= DEGRADED_STORAGE_PERCENT for v in storage

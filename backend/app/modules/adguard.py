@@ -8,7 +8,7 @@ import httpx
 
 from ..config import AdguardConfig
 from ..schemas.models import AdguardStats
-from .base import PollingModule, utcnow
+from .base import CredentialsError, PollingModule, require_secret, utcnow
 
 
 class AdguardModule(PollingModule[AdguardStats]):
@@ -19,10 +19,12 @@ class AdguardModule(PollingModule[AdguardStats]):
         self._cfg = cfg
         self._client = client
         self._base = cfg.url.rstrip("/")
-        self._auth = httpx.BasicAuth(cfg.username, cfg.password)
 
     async def _get(self, path: str) -> dict:
-        response = await self._client.get(f"{self._base}{path}", auth=self._auth)
+        auth = httpx.BasicAuth(self._cfg.username, require_secret(self._cfg.password, "adguard.password"))
+        response = await self._client.get(f"{self._base}{path}", auth=auth)
+        if response.status_code in (401, 403):
+            raise CredentialsError(f"AdGuard rechazó las credenciales (HTTP {response.status_code})")
         response.raise_for_status()
         return response.json()
 

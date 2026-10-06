@@ -5,6 +5,7 @@ import base64
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -354,3 +355,77 @@ def test_sems_config_accepts_hash_or_password() -> None:
         SemsConfig(username="u", station_id="s")
     # Mismo formato que envía la web: base64 del md5 en hexadecimal.
     assert hash_password("secreto") == "ZTIwMTk5NGRjYTkzMjBmYzk0MzM2NjAzYjFjZmM5NzA="
+
+
+def test_config_expands_env_references(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import expand_env
+
+    monkeypatch.setenv("OMV_PASSWORD", "s3cr3t")
+    monkeypatch.delenv("ADGUARD_PASSWORD", raising=False)
+    missing: set[str] = set()
+    raw = {"omv": {"password": "${OMV_PASSWORD}"}, "adguard": {"password": "${ADGUARD_PASSWORD}"}, "x": ["a-${OMV_PASSWORD}", 3, "$literal"]}
+    assert expand_env(raw, missing) == {"omv": {"password": "s3cr3t"}, "adguard": {"password": ""}, "x": ["a-s3cr3t", 3, "$literal"]}
+    assert missing == {"ADGUARD_PASSWORD"}
+
+
+def test_credentials_errors_wait_long_and_skip_empty_secrets() -> None:
+    from app.config import AdguardConfig, OmvConfig
+    from app.modules.adguard import AdguardModule
+    from app.modules.base import AUTH_RETRY_SECONDS
+    from app.modules.nas import NasModule
+
+    calls: list[str] = []
+
+    def handler(request):  # cualquier petición a la red sería un intento de login
+        calls.append(str(request.url))
+        raise AssertionError("no debe contactar con el servicio con la contraseña vacía")
+
+    async def run() -> None:
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        adguard = AdguardModule(AdguardConfig(url="http://x", username="u", password=""), client)
+        nas = NasModule(OmvConfig(url="http://x", username="admin", password=""))
+        nas._client = client
+        for module in (adguard, nas):
+            assert await module.refresh() == AUTH_RETRY_SECONDS
+            assert "vacío" in (module.health().last_error or "")
+        await client.aclose()
+
+    asyncio.run(run())
+    assert calls == []
+
+
+def test_rejected_login_waits_long() -> None:
+    from app.config import OmvConfig
+    from app.modules.base import AUTH_RETRY_SECONDS
+    from app.modules.nas import NasModule
+
+    attempts = 0
+
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(200, json={"response": None, "error": {"code": 0, "message": "Incorrect username or password."}})
+
+    async def run() -> None:
+        nas = NasModule(OmvConfig(url="http://x", username="admin", password="mala"))
+        nas._client = httpx.AsyncClient(base_url="http://x", transport=httpx.MockTransport(handler))
+        assert await nas.refresh() == AUTH_RETRY_SECONDS
+        await nas._client.aclose()
+
+    asyncio.run(run())
+    assert attempts == 1  # un único intento, sin reintento inmediato
+
+
+def test_nas_volume_label_is_readable() -> None:
+    from app.modules.nas import _volume_label
+
+    assert _volume_label({"label": "Data Pool"}, "/srv/x") == "Data Pool"
+    assert _volume_label({"label": "", "description": "/dev/sdb1 [EXT4, 514.12 GiB (57%) used]", "devicefile": "/dev/disk/by-uuid/2a6b"}, "/srv/x") == "/dev/sdb1"
+    assert _volume_label({}, "/srv/mergerfs/storage") == "/srv/mergerfs/storage"
+
+
+def test_nas_cpu_reads_omv8_field() -> None:
+    cpu, *_ = parse_system_info({"cpuUtilization": 8.04, "memTotal": 1, "memAvailable": 1})
+    assert cpu.usage_percent == 8.0
+    cpu, *_ = parse_system_info({"cpuUsage": 12.0, "memTotal": 1})  # OMV <= 7
+    assert cpu.usage_percent == 12.0

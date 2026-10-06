@@ -19,7 +19,7 @@ import httpx
 
 from ..config import SemsConfig
 from ..schemas.models import SemsFlow
-from .base import PollingModule, utcnow
+from .base import CredentialsError, PollingModule, require_secret, utcnow
 
 OK_CODES = ("00000", "0", 0)
 # Sesión caducada o inválida: hay que repetir el login.
@@ -104,18 +104,23 @@ class SemsModule(PollingModule[SemsFlow]):
         return body.get("data")
 
     async def _login(self) -> None:
+        pwd = self._cfg.password_hash or hash_password(require_secret(self._cfg.password, "sems.password_hash"))
+        require_secret(pwd, "sems.password_hash")
         response = await self._client.post(
             f"{self._cfg.gateway.rstrip('/')}/sems-user/api/v1/auth/cross-login",
             json={
                 "account": self._cfg.username,
-                "pwd": self._cfg.password_hash or hash_password(self._cfg.password or ""),
+                "pwd": pwd,
                 "agreement": 1,
                 "isLocal": False,
                 "isChinese": False,
             },
             headers=self._headers(None),
         )
-        data = self._check(response) or {}
+        try:
+            data = self._check(response) or {}
+        except SemsError as exc:
+            raise CredentialsError(f"SEMS rechazó el login: {exc}") from exc
         if data.get("mfaRequired"):
             raise SemsError("MFA", "La cuenta tiene verificación en dos pasos")
         self._session = data
