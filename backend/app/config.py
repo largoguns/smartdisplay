@@ -19,7 +19,7 @@ class _Section(BaseModel):
 
 class ServerConfig(_Section):
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 3080
     timezone: str = "Europe/Madrid"
     log_level: str = "INFO"
 
@@ -122,7 +122,7 @@ class OmvConfig(_Section):
 
 class AdguardConfig(_Section):
     enabled: bool = True
-    url: str = "http://127.0.0.1:3000"
+    url: str = "http://127.0.0.1:80"  # panel web de AdGuard (no el 3000 del asistente)
     username: str
     password: str
     poll_interval_seconds: float = Field(default=300, gt=0)

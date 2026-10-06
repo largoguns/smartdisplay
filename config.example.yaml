@@ -5,7 +5,7 @@
 
 server:
   host: "0.0.0.0"
-  port: 3000                      # Web + API. Cámbialo si AdGuard Home ya usa el 3000 en el NAS
+  port: 3080                      # Web + API (no 3000: AdGuard Home lo publica para su asistente)
   timezone: "Europe/Madrid"
   log_level: "INFO"
 
@@ -75,7 +75,7 @@ omv:
 # 6. AdGuard Home
 adguard:
   enabled: true
-  url: "http://127.0.0.1:3000"
+  url: "http://127.0.0.1:80"      # puerto del panel web de AdGuard (no el 3000 del asistente)
   username: "dashboard"            # usuario dedicado (ver README)
   password: "${ADGUARD_PASSWORD}"  # variable de entorno (.env en local, stack en Portainer)
   poll_interval_seconds: 300

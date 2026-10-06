@@ -17,7 +17,7 @@ Dashboard de cocina en formato *Bento Grid* (1920×1080, legible a 2–3 m) que 
 
 ```
 Dispositivo cliente (Chromium en modo kiosko)
-        │  HTTP + WebSocket  :3000
+        │  HTTP + WebSocket  :3080
         ▼
 NAS ── contenedor "kitchen-dashboard" (network_mode: host)
         ├── FastAPI: API REST, WebSocket /ws/solar y la web compilada
@@ -78,7 +78,7 @@ docker compose up -d --build
 
 ### En ambos casos
 
-El dashboard queda en `http://<IP_NAS>:3000` (`server.port`). **Si AdGuard Home ya usa el 3000 en el NAS, el contenedor no podrá arrancar:** cambia `server.port` y la URL del dispositivo cliente. Estado de cada módulo: `http://<IP_NAS>:3000/api/health`.
+El dashboard queda en `http://<IP_NAS>:3080` (`server.port`). No se usa el 3000 porque AdGuard Home lo publica por defecto para su asistente de instalación. Si `server.port` está ocupado, el contenedor lo indica en el log y no arranca: elige otro y actualiza la URL del dispositivo cliente. Estado de cada módulo: `http://<IP_NAS>:3080/api/health`.
 
 ## Configuración
 
@@ -104,7 +104,7 @@ adguard:
 
 ```yaml
 server:
-  port: 3000                  # web + API
+  port: 3080                  # web + API
   timezone: "Europe/Madrid"   # para calendario y "hoy"
   log_level: "INFO"
 ```
@@ -305,7 +305,7 @@ El script desactiva el salvapantallas (X11), oculta el cursor, evita el aviso "C
 Pruébalo a mano desde una terminal del escritorio del cliente:
 
 ```bash
-~/start-kiosk.sh http://<IP_NAS>:3000
+~/start-kiosk.sh http://<IP_NAS>:3080
 ```
 
 Para salir del modo kiosko: <kbd>Alt</kbd>+<kbd>F4</kbd>.
@@ -316,9 +316,9 @@ Depende del entorno gráfico. Para saber cuál usas: `echo $XDG_SESSION_TYPE` (`
 
 | Entorno | Fichero | Línea a añadir |
 |---|---|---|
-| Wayland con **labwc** (por defecto en las versiones actuales) | `~/.config/labwc/autostart` | `~/start-kiosk.sh http://<IP_NAS>:3000 &` |
-| Wayland con **wayfire** | `~/.config/wayfire.ini`, sección `[autostart]` | `kiosk = ~/start-kiosk.sh http://<IP_NAS>:3000` |
-| **X11** (LXDE) | `~/.config/lxsession/LXDE-pi/autostart` | `@/home/<usuario>/start-kiosk.sh http://<IP_NAS>:3000` |
+| Wayland con **labwc** (por defecto en las versiones actuales) | `~/.config/labwc/autostart` | `~/start-kiosk.sh http://<IP_NAS>:3080 &` |
+| Wayland con **wayfire** | `~/.config/wayfire.ini`, sección `[autostart]` | `kiosk = ~/start-kiosk.sh http://<IP_NAS>:3080` |
+| **X11** (LXDE) | `~/.config/lxsession/LXDE-pi/autostart` | `@/home/<usuario>/start-kiosk.sh http://<IP_NAS>:3080` |
 
 Crea el fichero o la sección si no existe y reinicia (`sudo reboot`) para comprobarlo. Con labwc, un `~/.config/labwc/autostart` propio sustituye al del sistema, así que el escritorio arranca sin panel ni iconos: es lo deseable en un kiosko.
 
@@ -337,7 +337,7 @@ Con `crontab -e` en el cliente (ajusta las horas). Para el nombre de la salida e
 
 ### Requisitos de red del cliente
 
-Solo necesita llegar a `http://<IP_NAS>:3000`. Las carátulas de Spotify se cargan desde internet (`i.scdn.co`); el resto de datos pasa por el NAS.
+Solo necesita llegar a `http://<IP_NAS>:3080`. Las carátulas de Spotify se cargan desde internet (`i.scdn.co`); el resto de datos pasa por el NAS.
 
 ## API
 
@@ -382,7 +382,7 @@ Los que se ejecutan con `python3` solo usan la librería estándar; los que van 
 |---|---|
 | Módulo con `401`/"Incorrect username or password" tras editar `.env` | Se usó `docker compose restart`: las variables no se releen. Usa `docker compose up -d`. |
 | `502`/página en blanco justo tras reiniciar | El backend tarda unos segundos en arrancar; las tarjetas reintentan cada 5 s. |
-| El contenedor no arranca (`address already in use`) | Otro servicio usa `server.port` (p. ej. AdGuard en el 3000). |
+| El contenedor no arranca ("No se puede escuchar en …") | Otro servicio usa `server.port`. Para ver cuál: `ss -ltnp \| grep ':<puerto> '` (si es `docker-proxy`, `docker ps --format '{{.Names}} {{.Ports}}' \| grep ':<puerto>'`). |
 | Energía solar "Sin actualizar" | Inversor apagado (de noche sin SEMS), IP cambiada, o el equipo que ejecuta el contenedor no llega a la LAN (p. ej. una VPN corporativa que enruta esa subred). |
 | Hogar y Red con "—" | Inversor sin medidor y SEMS desactivado o con lecturas de más de `max_age_minutes`. |
 | La compra muestra otra lista | Hay varias con el mismo título; se usa la no archivada y más reciente. Renombra o borra las antiguas. |
@@ -399,7 +399,7 @@ cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 CONFIG_PATH=../config.yaml STATIC_DIR=../frontend/dist .venv/bin/python -m app.main
 .venv/bin/pytest
 
-# Frontend con recarga en caliente en :5173 (proxy de /api y /ws hacia localhost:3000)
+# Frontend con recarga en caliente en :5173 (proxy de /api y /ws hacia localhost:3080)
 cd frontend && npm install && npm run dev
 ```
 

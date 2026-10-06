@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // En desarrollo, /api y /ws se redirigen al backend local (server.port de config.yaml).
-const backend = 'http://localhost:3000';
+const backend = 'http://localhost:3080';
 
 export default defineConfig({
   plugins: [react()],

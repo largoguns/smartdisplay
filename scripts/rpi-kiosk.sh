@@ -5,7 +5,7 @@
 #
 # Uso: start-kiosk.sh [URL]   (por defecto DASHBOARD_URL o la de abajo)
 
-DASHBOARD_URL="${1:-${DASHBOARD_URL:-http://<IP_DEL_NAS>:3000}}"
+DASHBOARD_URL="${1:-${DASHBOARD_URL:-http://<IP_DEL_NAS>:3080}}"
 PREFS="$HOME/.config/chromium/Default/Preferences"
 
 # Deshabilitar gestión de energía y salvapantallas del monitor (solo X11).
