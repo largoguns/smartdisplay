@@ -42,12 +42,17 @@ function DailyRow({ day, low, high }: { day: DailyForecast; low: number; high: n
   );
 }
 
-// Altos aproximados (px) de cada bloque para decidir qué cabe en la tarjeta.
-const CURRENT_H = 112;
-const HOURLY_H = 150;
-const DAY_ROW_H = 42;
-const GAP_H = 20;
+// Altos aproximados de cada bloque, en rem (la interfaz escala con la pantalla),
+// para decidir qué cabe en la tarjeta.
+const CURRENT_H = 7;
+const HOURLY_H = 9.375;
+const DAY_ROW_H = 2.625;
+const GAP_H = 1.25;
 const FULL_H = CURRENT_H + GAP_H + HOURLY_H + GAP_H + 5 * DAY_ROW_H;
+
+function rootFontPx(): number {
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+}
 
 export function LocationTag({ name }: { name: string }) {
   return (
@@ -61,7 +66,8 @@ export function LocationTag({ name }: { name: string }) {
 /** Widget completo de la ubicación principal; se adapta al alto disponible. */
 export function WeatherWidget({ index = 0, className = '' }: { index?: number; className?: string }) {
   const state = usePolling<WeatherData>(`/api/weather/${index}`, 5 * 60_000);
-  const [ref, height] = useElementHeight<HTMLDivElement>();
+  const [ref, heightPx] = useElementHeight<HTMLDivElement>();
+  const height = heightPx / rootFontPx(); // en rem
   const data = state.data;
 
   // Sin medida todavía (height 0) se asume que cabe todo.

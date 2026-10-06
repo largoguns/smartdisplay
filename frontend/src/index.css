@@ -10,6 +10,13 @@
     overflow: hidden;
   }
 
+  /* Diseño de referencia: 1920x1080 con base de 16px. Toda la interfaz está en
+     rem, así que escalar la base la adapta a cualquier pantalla manteniendo las
+     proporciones (p. ej. 1440x900 -> 12px). Manda la dimensión más ajustada. */
+  html {
+    font-size: min(calc(100vw / 120), calc(100vh / 67.5));
+  }
+
   body {
     @apply bg-slate-950 font-sans text-slate-100 antialiased;
     /* Halos de color tenues detrás de las tarjetas translúcidas. */

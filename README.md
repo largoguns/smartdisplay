@@ -1,6 +1,6 @@
 # Kitchen Smart Display
 
-Dashboard de cocina en formato *Bento Grid* (1920×1080, legible a 2–3 m) que sustituye a MagicMirror. Diseño original en [SPECIFICATION.md](SPECIFICATION.md); este README describe lo que está implementado.
+Dashboard de cocina en formato *Bento Grid* (diseñado a 1920×1080 y escalado a cualquier resolución, p. ej. 1440×900; legible a 2–3 m) que sustituye a MagicMirror. Diseño original en [SPECIFICATION.md](SPECIFICATION.md); este README describe lo que está implementado.
 
 | Tarjeta | Fuente | Actualización |
 |---|---|---|
