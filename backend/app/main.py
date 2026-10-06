@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -40,6 +42,8 @@ from .schemas.models import (
 )
 
 log = logging.getLogger("dashboard")
+
+PORT_BUSY_EXIT_DELAY_SECONDS = 30
 
 
 class SolarBroadcaster:
@@ -250,7 +254,24 @@ def main() -> None:
     )
     for noisy in ("httpx", "httpcore"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
-    uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, proxy_headers=True, access_log=False, log_level=cfg.server.log_level.lower())
+
+    # El puerto se reserva antes de arrancar los módulos: si está ocupado, uvicorn
+    # fallaría después de iniciarlos y cada reinicio del contenedor repetiría los
+    # logins (Keep, SEMS...).
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((cfg.server.host, cfg.server.port))
+    except OSError as exc:
+        log.error(
+            "No se puede escuchar en %s:%s (%s). Otro servicio usa ese puerto: cambia server.port en config.yaml.",
+            cfg.server.host, cfg.server.port, exc.strerror,
+        )
+        time.sleep(PORT_BUSY_EXIT_DELAY_SECONDS)  # frena el bucle de reinicios de Docker
+        raise SystemExit(1) from exc
+
+    config = uvicorn.Config(app, proxy_headers=True, access_log=False, log_level=cfg.server.log_level.lower())
+    uvicorn.Server(config).run(sockets=[sock])
 
 
 if __name__ == "__main__":
