@@ -26,6 +26,25 @@ export interface SolarData extends ModuleData {
   flow_updated_at: string | null;
 }
 
+export interface SolarDayPoint {
+  /** Minutos desde medianoche (hora local) del inicio del intervalo. */
+  minute: number;
+  pv_w: number;
+  house_w: number;
+}
+
+/** Resumen del día desde SEMS: totales (kWh) y curva de generación y consumo. */
+export interface SolarDay extends ModuleData {
+  day: string;
+  generated_kwh: number | null;
+  consumed_kwh: number | null;
+  /** Energía comprada a la red. */
+  imported_kwh: number | null;
+  /** Energía inyectada a la red. */
+  exported_kwh: number | null;
+  points: SolarDayPoint[];
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

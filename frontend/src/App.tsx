@@ -39,8 +39,8 @@ export default function App() {
       <CalendarWidget className="col-span-4" />
 
       <div className="col-span-4 flex min-h-0 flex-col gap-4">
-        <SolarFlowWidget className="flex-1" />
-        <KeepShoppingWidget className="flex-1" />
+        <SolarFlowWidget className="flex-[3]" />
+        <KeepShoppingWidget className="flex-[2]" />
       </div>
 
       <div className="col-span-4 flex min-h-0 flex-col gap-4">

@@ -61,6 +61,26 @@ class SemsFlow(ModuleData):
     refreshed_at: datetime | None
 
 
+class SolarDayPoint(StrictModel):
+    minute: int
+    """Minutos desde medianoche (hora local) del inicio del intervalo."""
+    pv_w: float
+    house_w: float
+
+
+class SolarDay(ModuleData):
+    """Resumen del día desde SEMS: totales y curva de generación y consumo."""
+
+    day: date
+    generated_kwh: float | None
+    consumed_kwh: float | None
+    imported_kwh: float | None
+    """Energía comprada a la red."""
+    exported_kwh: float | None
+    """Energía inyectada a la red."""
+    points: list[SolarDayPoint]
+
+
 # ── Calendario ───────────────────────────────────────────────────────────────
 
 

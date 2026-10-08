@@ -321,6 +321,36 @@ def test_sems_flow_direction() -> None:
     assert idle.grid_w == 0.0
 
 
+def test_sems_day_summary() -> None:
+    from datetime import date
+
+    from app.modules.sems import parse_day
+
+    production = {"proSystemTotalStats": 9.82, "proGridStats": 4.97, "proPurchaseStats": 6.86, "proConsumStats": 11.71, "currency": "EUR"}
+    curve = {
+        "dataList": [
+            {"item": "pSystem", "unit": "kW", "powerData": [
+                {"tp": "2026-10-07 00:00:00", "power": -0.004},
+                {"tp": "2026-10-07 00:01:00", "power": 0.002},
+                {"tp": "2026-10-07 13:05:00", "power": 2.0},
+                {"tp": "2026-10-07 13:06:00", "power": 2.6},
+                {"tp": "2026-10-07 13:10:00", "power": None},
+            ]},
+            {"item": "pConsum", "unit": "kW", "powerData": [
+                {"tp": "2026-10-07 00:00:00", "power": 0.2},
+                {"tp": "2026-10-07 13:05:00", "power": 0.4},
+            ]},
+            {"item": "pGrid", "unit": "kW", "powerData": [{"tp": "2026-10-07 13:05:00", "power": 1.6}]},
+        ]
+    }
+    day = parse_day(date(2026, 10, 7), production, curve)
+    assert (day.generated_kwh, day.consumed_kwh, day.imported_kwh, day.exported_kwh) == (9.82, 11.71, 6.86, 4.97)
+    assert [(p.minute, p.pv_w, p.house_w) for p in day.points] == [(0, 0.0, 200.0), (785, 2300.0, 400.0)]
+
+    empty = parse_day(date(2026, 10, 7), {}, {})
+    assert empty.imported_kwh is None and empty.points == []
+
+
 def test_solar_merges_inverter_with_sems() -> None:
     from app.modules.solar import merge_with_sems
     from app.schemas.models import SemsFlow

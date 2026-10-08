@@ -12,6 +12,7 @@ import {
 import { useSolarSocket } from '../hooks/useSolarSocket';
 import { formatNumber, formatPower, formatTime } from '../lib/format';
 import { Card, Placeholder } from './Card';
+import { SolarDayPanel } from './SolarDayPanel';
 
 /** Valor mostrado cuando el inversor no puede medir algo. */
 const UNKNOWN = '—';
@@ -173,55 +174,61 @@ export function SolarFlowWidget({ className = '' }: { className?: string }) {
       }
       className={className}
     >
-      <div className={`h-full transition-opacity duration-700 ${stale ? 'opacity-50' : ''}`}>
-        <svg viewBox={VIEWBOX} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
-          <FlowLine from={NODES.solar} to={NODES.inverter} watts={data.ppv} color={COLORS.solar} animate={animate} />
-          <FlowLine from={NODES.inverter} to={NODES.home} watts={house ?? 0} color={COLORS.home} animate={animate} />
-          <FlowLine from={NODES.inverter} to={NODES.grid} watts={grid ?? 0} color={gridColor} reverse={importing} animate={animate} />
-          {hasBattery && (
-            <FlowLine from={NODES.inverter} to={NODES.battery} watts={batteryPower} color={COLORS.battery} reverse={!charging} animate={animate} />
-          )}
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className={`min-h-0 flex-[5] transition-opacity duration-700 ${stale ? 'opacity-50' : ''}`}>
+          <svg viewBox={VIEWBOX} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
+            <FlowLine from={NODES.solar} to={NODES.inverter} watts={data.ppv} color={COLORS.solar} animate={animate} />
+            <FlowLine from={NODES.inverter} to={NODES.home} watts={house ?? 0} color={COLORS.home} animate={animate} />
+            <FlowLine from={NODES.inverter} to={NODES.grid} watts={grid ?? 0} color={gridColor} reverse={importing} animate={animate} />
+            {hasBattery && (
+              <FlowLine from={NODES.inverter} to={NODES.battery} watts={batteryPower} color={COLORS.battery} reverse={!charging} animate={animate} />
+            )}
 
-          <FlowNode at={NODES.solar} icon={Sun} color={COLORS.solar} active={producing} value={formatPower(data.ppv)} caption="Paneles" captionPosition="above" />
-          <FlowNode at={NODES.inverter} icon={Zap} color={COLORS.inverter} active={!stale} />
-          <FlowNode
-            at={NODES.home}
-            icon={House}
-            color={house !== null ? COLORS.home : COLORS.idle}
-            active={house !== null}
-            value={house !== null ? formatPower(house) : UNKNOWN}
-            caption="Hogar"
-            captionPosition="right"
-          />
-          <FlowNode
-            at={NODES.grid}
-            icon={UtilityPole}
-            color={gridColor}
-            active={exporting || importing}
-            value={grid !== null ? formatPower(grid) : UNKNOWN}
-            caption={grid === null ? 'Sin medidor' : exporting ? 'Exportando' : importing ? 'Importando' : 'Red'}
-            captionPosition="right"
-          />
-          {hasBattery && (
+            <FlowNode at={NODES.solar} icon={Sun} color={COLORS.solar} active={producing} value={formatPower(data.ppv)} caption="Paneles" captionPosition="above" />
+            <FlowNode at={NODES.inverter} icon={Zap} color={COLORS.inverter} active={!stale} />
             <FlowNode
-              at={NODES.battery}
-              icon={batteryIcon(data.battery_soc, charging)}
-              color={COLORS.battery}
-              active={Math.abs(batteryPower) >= FLOW_THRESHOLD_W}
-              value={data.battery_soc !== null ? `${formatNumber(data.battery_soc)} %` : formatPower(batteryPower)}
+              at={NODES.home}
+              icon={House}
+              color={house !== null ? COLORS.home : COLORS.idle}
+              active={house !== null}
+              value={house !== null ? formatPower(house) : UNKNOWN}
+              caption="Hogar"
               captionPosition="right"
             />
-          )}
+            <FlowNode
+              at={NODES.grid}
+              icon={UtilityPole}
+              color={gridColor}
+              active={exporting || importing}
+              value={grid !== null ? formatPower(grid) : UNKNOWN}
+              caption={grid === null ? 'Sin medidor' : exporting ? 'Exportando' : importing ? 'Importando' : 'Red'}
+              captionPosition="right"
+            />
+            {hasBattery && (
+              <FlowNode
+                at={NODES.battery}
+                icon={batteryIcon(data.battery_soc, charging)}
+                color={COLORS.battery}
+                active={Math.abs(batteryPower) >= FLOW_THRESHOLD_W}
+                value={data.battery_soc !== null ? `${formatNumber(data.battery_soc)} %` : formatPower(batteryPower)}
+                captionPosition="right"
+              />
+            )}
 
-          {/* Energía generada hoy, bajo los paneles. */}
-          <text x={NODES.solar.x} y={NODES.solar.y + NODES.solar.r + 44} textAnchor="middle" fontSize={34} fontWeight={700} fill="#fcd34d">
-            {formatNumber(data.today_energy_kwh, 1)}
-            <tspan fontSize={18} fontWeight={600} fill="#fde68a" fillOpacity={0.7}> kWh</tspan>
-          </text>
-          <text x={NODES.solar.x} y={NODES.solar.y + NODES.solar.r + 68} textAnchor="middle" fontSize={13} fontWeight={600} letterSpacing={1.5} fill="#fde68a" fillOpacity={0.6}>
-            GENERADO HOY
-          </text>
-        </svg>
+            {/* Energía generada hoy, bajo los paneles. */}
+            <text x={NODES.solar.x} y={NODES.solar.y + NODES.solar.r + 44} textAnchor="middle" fontSize={34} fontWeight={700} fill="#fcd34d">
+              {formatNumber(data.today_energy_kwh, 1)}
+              <tspan fontSize={18} fontWeight={600} fill="#fde68a" fillOpacity={0.7}> kWh</tspan>
+            </text>
+            <text x={NODES.solar.x} y={NODES.solar.y + NODES.solar.r + 68} textAnchor="middle" fontSize={13} fontWeight={600} letterSpacing={1.5} fill="#fde68a" fillOpacity={0.6}>
+              GENERADO HOY
+            </text>
+          </svg>
+        </div>
+        {/* Totales y curva del día: solo con SEMS configurado. */}
+        <div className="min-h-0 flex-[4]">
+          <SolarDayPanel />
+        </div>
       </div>
     </Card>
   );

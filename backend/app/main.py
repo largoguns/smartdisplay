@@ -23,7 +23,7 @@ from .modules.calendar import CalendarModule
 from .modules.keep import KeepModule
 from .modules.nas import NasModule
 from .modules.news import NewsModule
-from .modules.sems import SemsModule
+from .modules.sems import SemsModule, SolarDayModule
 from .modules.solar import SolarModule
 from .modules.spotify import SpotifyModule
 from .modules.weather import WeatherModule
@@ -37,6 +37,7 @@ from .schemas.models import (
     NowPlaying,
     ShoppingList,
     SolarData,
+    SolarDay,
     WeatherData,
     WeatherLocationInfo,
 )
@@ -76,6 +77,7 @@ def build_modules(cfg: AppConfig, client: httpx.AsyncClient) -> dict[str, Pollin
     sems = SemsModule(cfg.sems, client, tz) if cfg.sems and cfg.sems.enabled else None
     if sems is not None:
         modules["sems"] = sems
+        modules["solar_day"] = SolarDayModule(sems, tz)
     inverter = cfg.inverter if cfg.inverter and cfg.inverter.enabled else None
     if inverter is not None or sems is not None:
         modules["solar"] = SolarModule(inverter, sems, tz)
@@ -148,6 +150,11 @@ async def health(request: Request) -> HealthResponse:
 @app.get("/api/solar/current", response_model=SolarData)
 async def solar_current(request: Request) -> ModuleData:
     return _serve(request, "solar")
+
+
+@app.get("/api/solar/today", response_model=SolarDay)
+async def solar_today(request: Request) -> ModuleData:
+    return _serve(request, "solar_day")
 
 
 @app.get("/api/calendar", response_model=CalendarData)
