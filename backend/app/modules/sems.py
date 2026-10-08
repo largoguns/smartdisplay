@@ -46,15 +46,17 @@ def hash_password(password: str) -> str:
 
 def parse_flow(data: dict[str, Any], tz: ZoneInfo) -> SemsFlow:
     """``flows`` es un grafo origen → destinos; el sentido de la red sale de ahí:
-    {"pSystem": ["pConsum", "pGrid"]} = exportando, {"pGrid": [...]} = importando."""
+    {"pSystem": ["pConsum", "pGrid"]} = exportando, {"pGrid": [...]} = importando.
+    ``pGrid`` ya viene con signo (negativo al importar), así que solo se usa su
+    magnitud; el signo decide si ``flows`` no indica sentido."""
     flows: dict[str, list[str]] = data.get("flows") or {}
     grid_kw = float(data.get("pGrid") or 0.0)
-    if "pGrid" in flows and flows["pGrid"]:
-        grid_w = -grid_kw * 1000
+    if flows.get("pGrid"):
+        grid_w = -abs(grid_kw) * 1000
     elif any("pGrid" in targets for targets in flows.values()):
-        grid_w = grid_kw * 1000
+        grid_w = abs(grid_kw) * 1000
     else:
-        grid_w = 0.0
+        grid_w = grid_kw * 1000
 
     refreshed = data.get("refreshTime")
     return SemsFlow(

@@ -311,6 +311,12 @@ def test_sems_flow_direction() -> None:
     night = parse_flow({"pSystem": 0, "pConsum": 0.4, "pGrid": 0.4, "flows": {"pGrid": ["pConsum"]}}, TZ)
     assert night.grid_w == -400.0
 
+    # Respuesta real de SEMS: al importar, pGrid ya viene en negativo.
+    signed = parse_flow(
+        {"pSystem": 0.002, "pConsum": 0.393, "pGrid": -0.391, "flows": {"pSystem": ["pConsum"], "pGrid": ["pConsum"]}}, TZ
+    )
+    assert signed.grid_w == -391.0
+
     idle = parse_flow({"pSystem": 0.3, "pConsum": 0.3, "pGrid": 0, "flows": {"pSystem": ["pConsum"]}}, TZ)
     assert idle.grid_w == 0.0
 
