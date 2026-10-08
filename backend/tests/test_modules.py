@@ -215,6 +215,25 @@ def test_news_parses_rss() -> None:
     assert items[0].published_at == datetime(2026, 10, 6, 8, tzinfo=timezone.utc)
 
 
+def test_anime_keeps_only_series_with_new_episodes() -> None:
+    from app.modules.anime import parse_tracking
+
+    payload = {
+        "ok": True,
+        "tracking": [
+            {"id": 1, "anime_title": "Serie A", "thumbnail_url": "https://x/a.jpg", "latest_number": 3.0, "new_count": 2},
+            {"id": 2, "anime_title": "Serie B", "thumbnail_url": None, "latest_number": None, "new_count": 0},
+            {"id": 3, "anime_title": "Serie C", "thumbnail_url": "", "latest_number": 1.0, "new_count": 1, "error": None},
+        ],
+    }
+    items = parse_tracking(payload)
+    assert [(i.title, i.new_count) for i in items] == [("Serie A", 2), ("Serie C", 1)]
+    assert items[1].thumbnail_url is None
+
+    with pytest.raises(RuntimeError):
+        parse_tracking({"ok": False, "error": "caído"})
+
+
 class _FlakyModule(PollingModule[AdguardStats]):
     name = "adguard"
 

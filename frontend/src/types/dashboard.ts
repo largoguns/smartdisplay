@@ -164,3 +164,16 @@ export interface NewsData extends ModuleData {
   ticker_speed_seconds: number;
   items: NewsItem[];
 }
+
+export interface AnimeEpisode {
+  id: number;
+  title: string;
+  thumbnail_url: string | null;
+  /** Capítulos nuevos desde la última vez que se marcaron como vistos. */
+  new_count: number;
+}
+
+/** Solo las series con capítulos nuevos. */
+export interface AnimeData extends ModuleData {
+  items: AnimeEpisode[];
+}

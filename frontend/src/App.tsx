@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AnimeTicker } from './components/AnimeTicker';
 import { CalendarWidget } from './components/CalendarWidget';
 import { CompactWeatherWidget } from './components/CompactWeatherWidget';
 import { ClockWidget } from './components/ClockWidget';
@@ -51,7 +52,10 @@ export default function App() {
         <SpotifyNowPlaying />
       </div>
 
-      <NewsTicker className="col-span-12" />
+      <div className="col-span-12 flex flex-col gap-4">
+        <AnimeTicker />
+        <NewsTicker />
+      </div>
     </main>
   );
 }

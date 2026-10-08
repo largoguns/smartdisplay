@@ -144,6 +144,14 @@ class NewsConfig(_Section):
     feeds: list[NewsFeed] = Field(default_factory=list)
 
 
+class AnimeConfig(_Section):
+    """App de seguimiento de anime: avisa de capítulos nuevos de las series seguidas."""
+
+    enabled: bool = True
+    url: str  # raíz de la app, p. ej. http://<IP>:8888/anime
+    poll_interval_seconds: float = Field(default=1800, gt=0)
+
+
 class AppConfig(_Section):
     """Una sección ausente equivale a módulo deshabilitado."""
 
@@ -157,6 +165,7 @@ class AppConfig(_Section):
     adguard: AdguardConfig | None = None
     spotify: SpotifyConfig | None = None
     news: NewsConfig | None = None
+    anime: AnimeConfig | None = None
 
 
 _ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")

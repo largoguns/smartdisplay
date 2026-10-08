@@ -224,6 +224,16 @@ keep:
 
 Si suena una sola cuenta se muestra esa; si suenan varias, la que use un dispositivo de `preferred_devices` (por orden). Sin reproducción la tarjeta se oculta y el espacio pasa a El tiempo.
 
+### Anime (`anime`)
+
+```yaml
+anime:
+  url: "http://<IP>:8888/anime"
+  poll_interval_seconds: 1800
+```
+
+Llama a `POST <url>/api/tracking/refresh` de la app de seguimiento y muestra, en una franja sobre las noticias, cada serie con capítulos nuevos (`new_count > 0`) y cuántos tiene. Sin capítulos nuevos la franja se oculta. Las carátulas se cargan desde la web de origen.
+
 ### NAS y AdGuard (`omv`, `adguard`)
 
 ```yaml
@@ -351,6 +361,7 @@ Solo necesita llegar a `http://<IP_NAS>:3080`. Las carátulas de Spotify se carg
 | `GET /api/media/now-playing` | Spotify |
 | `GET /api/system/nas` · `GET /api/network/adguard` | NAS y AdGuard |
 | `GET /api/news` | Titulares |
+| `GET /api/anime` | Series de anime con capítulos nuevos |
 
 Respuestas: `200` con `"status": "ok"` o `"stale"`; `503` si el módulo aún no tiene datos; `404` si está desactivado.
 

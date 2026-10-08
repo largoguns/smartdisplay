@@ -232,6 +232,22 @@ class NewsData(ModuleData):
     items: list[NewsItem]
 
 
+# ── Anime ────────────────────────────────────────────────────────────────────
+
+
+class AnimeEpisode(StrictModel):
+    id: int
+    title: str
+    thumbnail_url: str | None
+    new_count: int
+    """Capítulos nuevos desde la última vez que se marcaron como vistos."""
+
+
+class AnimeData(ModuleData):
+    items: list[AnimeEpisode]
+    """Solo las series con capítulos nuevos."""
+
+
 # ── Salud ────────────────────────────────────────────────────────────────────
 
 

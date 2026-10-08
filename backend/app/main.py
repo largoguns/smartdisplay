@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse
 
 from .config import MISSING_ENV, AppConfig, get_config
 from .modules.adguard import AdguardModule
+from .modules.anime import AnimeModule
 from .modules.base import PollingModule
 from .modules.calendar import CalendarModule
 from .modules.keep import KeepModule
@@ -29,6 +30,7 @@ from .modules.spotify import SpotifyModule
 from .modules.weather import WeatherModule
 from .schemas.models import (
     AdguardStats,
+    AnimeData,
     CalendarData,
     HealthResponse,
     ModuleData,
@@ -96,6 +98,8 @@ def build_modules(cfg: AppConfig, client: httpx.AsyncClient) -> dict[str, Pollin
         modules["spotify"] = SpotifyModule(cfg.spotify, client)
     if cfg.news and cfg.news.enabled:
         modules["news"] = NewsModule(cfg.news, client)
+    if cfg.anime and cfg.anime.enabled:
+        modules["anime"] = AnimeModule(cfg.anime, client)
     return modules
 
 
@@ -205,6 +209,11 @@ async def now_playing(request: Request) -> ModuleData:
 @app.get("/api/news", response_model=NewsData)
 async def news(request: Request) -> ModuleData:
     return _serve(request, "news")
+
+
+@app.get("/api/anime", response_model=AnimeData)
+async def anime(request: Request) -> ModuleData:
+    return _serve(request, "anime")
 
 
 @app.websocket("/ws/solar")

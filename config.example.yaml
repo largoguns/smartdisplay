@@ -104,3 +104,9 @@ news:
       url: "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada"
     - name: "Xataka"
       url: "https://feeds.weblogssl.com/xataka2"
+
+# 9. Capítulos nuevos de anime (app de seguimiento propia en la LAN)
+anime:
+  enabled: false
+  url: "http://<IP>:8888/anime"   # raíz de la app; se llama a POST <url>/api/tracking/refresh
+  poll_interval_seconds: 1800     # cada refresco consulta todas las series en su web de origen
