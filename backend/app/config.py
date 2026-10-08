@@ -72,7 +72,7 @@ class WeatherConfig(_Section):
     muestran como tarjetas compactas."""
 
     enabled: bool = True
-    update_interval_minutes: float = Field(default=15, gt=0)
+    update_interval_minutes: float = Field(default=5, gt=0)
     locations: list[WeatherLocation] = Field(min_length=1)
 
 
@@ -97,7 +97,7 @@ class KeepConfig(_Section):
     master_token: str | None = None
     target_list_title: str = "La Compra"  # sin distinguir mayúsculas
     completed_items_shown: int = Field(default=0, ge=0)  # elementos marcados a mostrar (0 = solo pendientes)
-    poll_interval_seconds: float = Field(default=300, gt=0)
+    poll_interval_seconds: float = Field(default=30, gt=0)
 
 
 class OmvConfig(_Section):
