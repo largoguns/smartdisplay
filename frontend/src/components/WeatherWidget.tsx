@@ -16,31 +16,48 @@ export function dayName(isoDate: string): string {
   return capitalize(date.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', ''));
 }
 
-function DailyRow({ day, low, high }: { day: DailyForecast; low: number; high: number }) {
+/** Columnas de la previsión diaria: día, icono, mín, máx, sensación, lluvia, viento. */
+const DAILY_GRID = 'grid grid-cols-[4rem_2rem_repeat(5,minmax(0,1fr))] items-center gap-x-3';
+
+function DailyHeader() {
+  return (
+    <div className={`${DAILY_GRID} text-center text-sm font-semibold uppercase tracking-wider text-slate-500`}>
+      <span className="col-start-3">Mín</span>
+      <span>Máx</span>
+      <span>Sensación</span>
+      <span>Lluvia</span>
+      <span>Viento</span>
+    </div>
+  );
+}
+
+function DailyRow({ day }: { day: DailyForecast }) {
   const { Icon, color } = weatherInfo(day.weather_code);
-  // Con los valores redondeados que se muestran: dos "9°" empiezan en el mismo sitio.
-  const min = Math.round(day.temperature_min);
-  const max = Math.round(day.temperature_max);
-  const span = Math.max(high - low, 1);
-  const left = ((min - low) / span) * 100;
-  const width = ((max - min) / span) * 100;
-  const rain = day.precipitation_probability_max ?? 0;
+  const feelsMin = day.apparent_temperature_min;
+  const feelsMax = day.apparent_temperature_max;
 
   return (
-    <li className="flex items-center gap-4">
-      <span className="w-16 text-2xl font-semibold text-slate-300">{dayName(day.date)}</span>
-      <Icon className={`h-8 w-8 shrink-0 ${color}`} />
-      <span className="w-14 text-right text-lg font-semibold tabular-nums text-sky-300">
-        {rain >= RAIN_MIN_PERCENT ? `${rain}%` : ''}
+    <li className={`${DAILY_GRID} text-center tabular-nums`}>
+      <span className="text-left text-2xl font-semibold text-slate-300">{dayName(day.date)}</span>
+      <Icon className={`h-8 w-8 ${color}`} />
+      <span className="text-2xl font-semibold text-sky-300">{Math.round(day.temperature_min)}°</span>
+      <span className="text-2xl font-bold text-orange-300">{Math.round(day.temperature_max)}°</span>
+      <span className="text-xl font-semibold text-slate-300">
+        {feelsMin !== null && feelsMax !== null ? `${Math.round(feelsMin)}° / ${Math.round(feelsMax)}°` : '–'}
       </span>
-      <span className="w-12 text-right text-2xl font-semibold tabular-nums text-slate-400">{min}°</span>
-      <span className="relative h-2 flex-1 rounded-full bg-slate-800">
-        <span
-          className="absolute inset-y-0 rounded-full bg-gradient-to-r from-sky-400 via-amber-300 to-orange-400"
-          style={{ left: `${left}%`, width: `${Math.max(width, 4)}%` }}
-        />
+      <span className={`text-xl font-semibold ${(day.precipitation_probability_max ?? 0) >= RAIN_MIN_PERCENT ? 'text-sky-300' : 'text-slate-500'}`}>
+        {day.precipitation_probability_max !== null ? `${day.precipitation_probability_max}%` : '–'}
       </span>
-      <span className="w-12 text-2xl font-bold tabular-nums text-white">{max}°</span>
+      <span className="text-xl font-semibold text-slate-300">
+        {day.wind_speed_max !== null ? (
+          <>
+            {Math.round(day.wind_speed_max)}
+            <span className="ml-1 text-base font-medium text-slate-500">km/h</span>
+          </>
+        ) : (
+          '–'
+        )}
+      </span>
     </li>
   );
 }
@@ -50,8 +67,9 @@ function DailyRow({ day, low, high }: { day: DailyForecast; low: number; high: n
 const CURRENT_H = 7;
 const HOURLY_H = 9.375;
 const DAY_ROW_H = 2.625;
+const DAILY_HEADER_H = 1.75;
 const GAP_H = 1.25;
-const FULL_H = CURRENT_H + GAP_H + HOURLY_H + GAP_H + 5 * DAY_ROW_H;
+const FULL_H = CURRENT_H + GAP_H + HOURLY_H + GAP_H + DAILY_HEADER_H + 5 * DAY_ROW_H;
 
 function rootFontPx(): number {
   return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -75,7 +93,7 @@ export function WeatherWidget({ index = 0, className = '' }: { index?: number; c
 
   // Sin medida todavía (height 0) se asume que cabe todo.
   const showHourly = height === 0 || height >= FULL_H;
-  const available = height - CURRENT_H - GAP_H - (showHourly ? HOURLY_H + GAP_H : 0);
+  const available = height - CURRENT_H - GAP_H - DAILY_HEADER_H - (showHourly ? HOURLY_H + GAP_H : 0);
   const daysShown = height === 0 ? 5 : Math.max(2, Math.min(5, Math.floor(available / DAY_ROW_H)));
 
   return (
@@ -106,8 +124,6 @@ function WeatherBody({ data, showHourly, daysShown }: { data: WeatherData; showH
   const { current } = data;
   const now = weatherInfo(current.weather_code, current.is_day);
   const days = data.daily.slice(0, daysShown);
-  const low = Math.min(...days.map((d) => Math.round(d.temperature_min)));
-  const high = Math.max(...days.map((d) => Math.round(d.temperature_max)));
   // La previsión horaria puede haberse quedado atrás si el último fetch es antiguo.
   const hours = data.hourly.filter((h) => new Date(h.time).getTime() > Date.now() - 3_600_000).slice(0, HOURS_SHOWN);
 
@@ -158,11 +174,14 @@ function WeatherBody({ data, showHourly, daysShown }: { data: WeatherData; showH
         </div>
       )}
 
-      <ul className="space-y-2.5">
-        {days.map((day) => (
-          <DailyRow key={day.date} day={day} low={low} high={high} />
-        ))}
-      </ul>
+      <div className="space-y-1">
+        <DailyHeader />
+        <ul className="space-y-2.5">
+          {days.map((day) => (
+            <DailyRow key={day.date} day={day} />
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

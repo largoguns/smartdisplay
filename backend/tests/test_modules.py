@@ -123,7 +123,10 @@ def test_weather_parses_open_meteo_payload() -> None:
             "temperature_2m_min": [10.0] * 6,
             "temperature_2m_max": [22.0] * 6,
             "weather_code": [3] * 6,
+            "apparent_temperature_min": [8.4] * 6,
+            "apparent_temperature_max": [23.6] * 6,
             "precipitation_probability_max": [20] * 6,
+            "wind_speed_10m_max": [18.0] * 5 + [None],
             "sunrise": ["2026-10-06T08:05"] * 6,
             "sunset": ["2026-10-06T19:40"] * 6,
         },
@@ -134,6 +137,8 @@ def test_weather_parses_open_meteo_payload() -> None:
     assert len(data.hourly) == 12
     assert data.hourly[0].time.hour == 9
     assert len(data.daily) == 5
+    assert data.daily[0].apparent_temperature_max == 23.6
+    assert data.daily[0].wind_speed_max == 18.0
 
 
 def _state(account: str, device: str, playing: bool = True) -> PlayerState:

@@ -21,6 +21,10 @@ def _opt_int(value: Any) -> int | None:
     return int(value) if value is not None else None
 
 
+def _opt_float(value: Any) -> float | None:
+    return float(value) if value is not None else None
+
+
 def _parse_time(value: str | None, tz: ZoneInfo) -> datetime | None:
     if not value:
         return None
@@ -60,6 +64,11 @@ def parse_forecast(payload: dict[str, Any], location: str) -> WeatherData:
             break
 
     d = payload["daily"]
+
+    def daily_value(key: str, i: int) -> Any:
+        values = d.get(key) or []
+        return values[i] if i < len(values) else None
+
     daily = [
         DailyForecast(
             date=date.fromisoformat(d["time"][i]),
@@ -67,6 +76,9 @@ def parse_forecast(payload: dict[str, Any], location: str) -> WeatherData:
             temperature_max=float(d["temperature_2m_max"][i]),
             weather_code=int(d["weather_code"][i]),
             precipitation_probability_max=_opt_int(d["precipitation_probability_max"][i]),
+            apparent_temperature_min=_opt_float(daily_value("apparent_temperature_min", i)),
+            apparent_temperature_max=_opt_float(daily_value("apparent_temperature_max", i)),
+            wind_speed_max=_opt_float(daily_value("wind_speed_10m_max", i)),
             sunrise=_parse_time(d["sunrise"][i], tz),
             sunset=_parse_time(d["sunset"][i], tz),
         )
@@ -93,7 +105,10 @@ class WeatherModule(PollingModule[WeatherData]):
             "longitude": self.location.longitude,
             "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day",
             "hourly": "temperature_2m,weather_code,precipitation_probability,is_day",
-            "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
+            "daily": (
+                "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,"
+                "apparent_temperature_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset"
+            ),
             "timezone": "auto",
             "forecast_days": DAILY_DAYS + 1,  # margen para las 12 h siguientes cerca de medianoche
             "wind_speed_unit": "kmh",

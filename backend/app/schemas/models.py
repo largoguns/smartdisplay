@@ -126,6 +126,9 @@ class DailyForecast(StrictModel):
     temperature_max: float
     weather_code: int
     precipitation_probability_max: int | None
+    apparent_temperature_min: float | None
+    apparent_temperature_max: float | None
+    wind_speed_max: float | None
     sunrise: datetime | None
     sunset: datetime | None
 

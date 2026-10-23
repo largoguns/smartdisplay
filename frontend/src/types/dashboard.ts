@@ -84,6 +84,9 @@ export interface DailyForecast {
   temperature_max: number;
   weather_code: number;
   precipitation_probability_max: number | null;
+  apparent_temperature_min: number | null;
+  apparent_temperature_max: number | null;
+  wind_speed_max: number | null;
   sunrise: string | null;
   sunset: string | null;
 }
