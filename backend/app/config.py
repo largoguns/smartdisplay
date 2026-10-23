@@ -69,7 +69,7 @@ class WeatherLocation(_Section):
 
 class WeatherConfig(_Section):
     """La primera ubicación es la principal (widget completo); el resto se
-    muestran como tarjetas compactas."""
+    muestran en una tarjeta compacta que va rotando."""
 
     enabled: bool = True
     update_interval_minutes: float = Field(default=5, gt=0)

@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { AnimeTicker } from './components/AnimeTicker';
 import { CalendarWidget } from './components/CalendarWidget';
-import { CompactWeatherWidget } from './components/CompactWeatherWidget';
 import { ClockWidget } from './components/ClockWidget';
 import { KeepShoppingWidget } from './components/KeepShoppingWidget';
 import { NewsTicker } from './components/NewsTicker';
 import { SolarFlowWidget } from './components/SolarFlowWidget';
 import { SpotifyNowPlaying } from './components/SpotifyNowPlaying';
 import { SystemPills } from './components/SystemPills';
+import { WeatherCarousel } from './components/WeatherCarousel';
 import { WeatherWidget } from './components/WeatherWidget';
 import { usePolling } from './hooks/usePolling';
 import type { WeatherLocationInfo } from './types/dashboard';
@@ -46,9 +46,7 @@ export default function App() {
 
       <div className="col-span-4 flex min-h-0 flex-col gap-4">
         <WeatherWidget className="flex-1" />
-        {secondary.map((location) => (
-          <CompactWeatherWidget key={location.index} index={location.index} />
-        ))}
+        <WeatherCarousel indexes={secondary.map((l) => l.index)} />
         <SpotifyNowPlaying />
       </div>
 

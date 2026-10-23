@@ -32,7 +32,7 @@ weather:
   enabled: true
   update_interval_minutes: 15
   # La primera ubicación es la principal (widget completo); el resto se
-  # muestran como tarjetas compactas debajo.
+  # muestran debajo en una tarjeta compacta que rota cada 5 s.
   locations:
     - name: "Casa"
       latitude: 40.4168
