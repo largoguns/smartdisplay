@@ -25,8 +25,33 @@ function useDailyReload() {
   }, []);
 }
 
+/** Cada cuánto se comprueba si se ha desplegado una build nueva. */
+const BUILD_CHECK_MS = 60_000;
+const BUILD_SCRIPT = /\/assets\/index-[\w-]+\.js/;
+
+/** Recarga en cuanto el index.html servido apunta a otro bundle (nuevo despliegue). */
+function useReloadOnNewBuild() {
+  useEffect(() => {
+    const loaded = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src.match(BUILD_SCRIPT)?.[0];
+    if (!loaded) return; // servidor de desarrollo de Vite: no hay bundle con hash
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await fetch('/', { cache: 'no-store' });
+        if (!res.ok) return;
+        const served = (await res.text()).match(BUILD_SCRIPT)?.[0];
+        // Sin bundle en la respuesta (backend a medio arrancar...) no se recarga.
+        if (served && served !== loaded) window.location.reload();
+      } catch {
+        // Servidor caído durante el despliegue: se sigue mostrando lo que hay.
+      }
+    }, BUILD_CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+}
+
 export default function App() {
   useDailyReload();
+  useReloadOnNewBuild();
   const { data: locations } = usePolling<WeatherLocationInfo[]>('/api/weather/locations', 10 * 60_000);
   const secondary = locations?.filter((l) => l.index > 0) ?? [];
 
