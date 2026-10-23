@@ -25,6 +25,16 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/** Antigüedad legible ("ahora", "hace 5 min", "hace 2 h", "hace 3 d"). */
+export function timeAgo(iso: string | null, now = Date.now()): string | null {
+  if (!iso) return null;
+  const minutes = Math.round((now - Date.parse(iso)) / 60_000);
+  if (minutes < 1) return 'ahora';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `hace ${hours} h` : `hace ${Math.round(hours / 24)} d`;
+}
+
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

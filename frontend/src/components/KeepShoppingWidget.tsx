@@ -1,5 +1,7 @@
 import { ShoppingCart, Square, SquareCheckBig } from 'lucide-react';
+import { useNow } from '../hooks/useNow';
 import { isStale, usePolling } from '../hooks/usePolling';
+import { timeAgo } from '../lib/format';
 import type { ShoppingList } from '../types/dashboard';
 import { Card, Placeholder, fadeBottom } from './Card';
 
@@ -10,6 +12,7 @@ export function KeepShoppingWidget({ className = '' }: { className?: string }) {
   const state = usePolling<ShoppingList>('/api/keep/shopping-list', 30_000);
   const list = state.data;
   const pending = list?.items.filter((item) => !item.completed).length ?? 0;
+  const now = useNow(30_000);
 
   return (
     <Card
@@ -19,9 +22,14 @@ export function KeepShoppingWidget({ className = '' }: { className?: string }) {
       stale={isStale(state)}
       className={className}
       headerRight={
-        list && pending > 0 ? (
-          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-lg font-bold tabular-nums text-emerald-300">{pending}</span>
-        ) : undefined
+        list && (
+          <>
+            <span className="text-base text-slate-500">{timeAgo(list.fetched_at, now.getTime())}</span>
+            {pending > 0 && (
+              <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-lg font-bold tabular-nums text-emerald-300">{pending}</span>
+            )}
+          </>
+        )
       }
     >
       {!list ? (

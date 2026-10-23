@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Newspaper, RefreshCw } from 'lucide-react';
 import { isStale, usePolling } from '../hooks/usePolling';
+import { timeAgo } from '../lib/format';
 import type { NewsData } from '../types/dashboard';
 import { StaleBadge } from './Card';
-
-function ago(iso: string | null): string | null {
-  if (!iso) return null;
-  const minutes = Math.round((Date.now() - Date.parse(iso)) / 60_000);
-  if (minutes < 1) return 'ahora';
-  if (minutes < 60) return `hace ${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  return hours < 24 ? `hace ${hours} h` : `hace ${Math.round(hours / 24)} d`;
-}
 
 export function NewsTicker({ className = '' }: { className?: string }) {
   const state = usePolling<NewsData>('/api/news', 5 * 60_000);
@@ -39,7 +31,7 @@ export function NewsTicker({ className = '' }: { className?: string }) {
         <div key={item.id} className="flex min-w-0 flex-1 animate-fade-in items-center gap-4">
           <span className="shrink-0 rounded-lg bg-rose-400/15 px-3 py-1 text-lg font-bold text-rose-200">{item.source}</span>
           <span className="truncate text-2xl font-semibold tracking-tight text-white">{item.title}</span>
-          {ago(item.published_at) && <span className="shrink-0 text-lg text-slate-500">{ago(item.published_at)}</span>}
+          {timeAgo(item.published_at) && <span className="shrink-0 text-lg text-slate-500">{timeAgo(item.published_at)}</span>}
         </div>
       ) : (
         <span className="flex-1 text-xl text-slate-500">{state.data ? 'Sin titulares' : 'Cargando titulares…'}</span>
