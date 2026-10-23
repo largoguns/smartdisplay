@@ -18,9 +18,12 @@ export function dayName(isoDate: string): string {
 
 function DailyRow({ day, low, high }: { day: DailyForecast; low: number; high: number }) {
   const { Icon, color } = weatherInfo(day.weather_code);
+  // Con los valores redondeados que se muestran: dos "9°" empiezan en el mismo sitio.
+  const min = Math.round(day.temperature_min);
+  const max = Math.round(day.temperature_max);
   const span = Math.max(high - low, 1);
-  const left = ((day.temperature_min - low) / span) * 100;
-  const width = ((day.temperature_max - day.temperature_min) / span) * 100;
+  const left = ((min - low) / span) * 100;
+  const width = ((max - min) / span) * 100;
   const rain = day.precipitation_probability_max ?? 0;
 
   return (
@@ -30,14 +33,14 @@ function DailyRow({ day, low, high }: { day: DailyForecast; low: number; high: n
       <span className="w-14 text-right text-lg font-semibold tabular-nums text-sky-300">
         {rain >= RAIN_MIN_PERCENT ? `${rain}%` : ''}
       </span>
-      <span className="w-12 text-right text-2xl font-semibold tabular-nums text-slate-400">{Math.round(day.temperature_min)}°</span>
+      <span className="w-12 text-right text-2xl font-semibold tabular-nums text-slate-400">{min}°</span>
       <span className="relative h-2 flex-1 rounded-full bg-slate-800">
         <span
           className="absolute inset-y-0 rounded-full bg-gradient-to-r from-sky-400 via-amber-300 to-orange-400"
           style={{ left: `${left}%`, width: `${Math.max(width, 4)}%` }}
         />
       </span>
-      <span className="w-12 text-2xl font-bold tabular-nums text-white">{Math.round(day.temperature_max)}°</span>
+      <span className="w-12 text-2xl font-bold tabular-nums text-white">{max}°</span>
     </li>
   );
 }
@@ -96,8 +99,8 @@ function WeatherBody({ data, showHourly, daysShown }: { data: WeatherData; showH
   const { current } = data;
   const now = weatherInfo(current.weather_code, current.is_day);
   const days = data.daily.slice(0, daysShown);
-  const low = Math.min(...days.map((d) => d.temperature_min));
-  const high = Math.max(...days.map((d) => d.temperature_max));
+  const low = Math.min(...days.map((d) => Math.round(d.temperature_min)));
+  const high = Math.max(...days.map((d) => Math.round(d.temperature_max)));
   // La previsión horaria puede haberse quedado atrás si el último fetch es antiguo.
   const hours = data.hourly.filter((h) => new Date(h.time).getTime() > Date.now() - 3_600_000).slice(0, HOURS_SHOWN);
 
