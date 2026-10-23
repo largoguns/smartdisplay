@@ -68,6 +68,8 @@ export interface CurrentWeather {
   wind_speed: number;
   weather_code: number;
   is_day: boolean;
+  /** Índice europeo de calidad del aire (EAQI). */
+  european_aqi: number | null;
 }
 
 export interface HourlyForecast {
@@ -87,6 +89,7 @@ export interface DailyForecast {
   apparent_temperature_min: number | null;
   apparent_temperature_max: number | null;
   wind_speed_max: number | null;
+  uv_index_max: number | null;
   sunrise: string | null;
   sunset: string | null;
 }

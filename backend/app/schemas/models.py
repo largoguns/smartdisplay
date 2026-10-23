@@ -110,6 +110,7 @@ class CurrentWeather(StrictModel):
     wind_speed: float
     weather_code: int
     is_day: bool
+    european_aqi: int | None
 
 
 class HourlyForecast(StrictModel):
@@ -129,6 +130,7 @@ class DailyForecast(StrictModel):
     apparent_temperature_min: float | None
     apparent_temperature_max: float | None
     wind_speed_max: float | None
+    uv_index_max: float | None
     sunrise: datetime | None
     sunset: datetime | None
 

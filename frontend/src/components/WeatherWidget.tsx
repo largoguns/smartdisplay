@@ -2,7 +2,7 @@ import { CloudSun, Droplets, MapPin, Umbrella, Wind } from 'lucide-react';
 import { useElementHeight } from '../hooks/useElementHeight';
 import { isStale, usePolling } from '../hooks/usePolling';
 import { capitalize, formatNumber, parseLocalDate, startOfDay } from '../lib/format';
-import { weatherInfo } from '../lib/weather';
+import { airQualityLevel, uvLevel, weatherInfo } from '../lib/weather';
 import type { DailyForecast, WeatherData } from '../types/dashboard';
 import { Card, Placeholder, UpdatedAgo } from './Card';
 
@@ -64,7 +64,7 @@ function DailyRow({ day }: { day: DailyForecast }) {
 
 // Altos aproximados de cada bloque, en rem (la interfaz escala con la pantalla),
 // para decidir qué cabe en la tarjeta.
-const CURRENT_H = 7;
+const CURRENT_H = 8.75;
 const HOURLY_H = 9.375;
 const DAY_ROW_H = 2.625;
 const DAILY_HEADER_H = 1.75;
@@ -120,6 +120,27 @@ export function WeatherWidget({ index = 0, className = '' }: { index?: number; c
   );
 }
 
+/** Índice UV máximo de hoy y calidad del aire actual, con su categoría. */
+function IndexesRow({ uv, aqi }: { uv: number | null; aqi: number | null }) {
+  if (uv === null && aqi === null) return null;
+  const uvInfo = uv !== null ? uvLevel(uv) : null;
+  const air = aqi !== null ? airQualityLevel(aqi) : null;
+  return (
+    <div className="flex gap-5 whitespace-nowrap text-xl text-slate-400">
+      {uvInfo && uv !== null && (
+        <span>
+          UV <span className={`font-semibold ${uvInfo.color}`}>{Math.round(uv)} {uvInfo.label}</span>
+        </span>
+      )}
+      {air && (
+        <span>
+          Aire <span className={`font-semibold ${air.color}`}>{air.label}</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function WeatherBody({ data, showHourly, daysShown }: { data: WeatherData; showHourly: boolean; daysShown: number }) {
   const { current } = data;
   const now = weatherInfo(current.weather_code, current.is_day);
@@ -147,6 +168,7 @@ function WeatherBody({ data, showHourly, daysShown }: { data: WeatherData; showH
               {formatNumber(current.wind_speed)} km/h
             </span>
           </div>
+          <IndexesRow uv={data.daily[0]?.uv_index_max ?? null} aqi={current.european_aqi} />
         </div>
       </div>
 

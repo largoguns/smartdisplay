@@ -57,3 +57,28 @@ export function weatherInfo(code: number, isDay = true): { label: string; Icon: 
   const info = WMO[code] ?? { ...clear, label: 'Desconocido' };
   return { label: info.label, Icon: isDay ? info.day : info.night, color: info.color };
 }
+
+export interface Level {
+  label: string;
+  color: string;
+}
+
+/** Categorías del índice UV de la OMS. */
+export function uvLevel(uv: number): Level {
+  const value = Math.round(uv);
+  if (value <= 2) return { label: 'bajo', color: 'text-emerald-300' };
+  if (value <= 5) return { label: 'moderado', color: 'text-yellow-300' };
+  if (value <= 7) return { label: 'alto', color: 'text-orange-400' };
+  if (value <= 10) return { label: 'muy alto', color: 'text-red-400' };
+  return { label: 'extremo', color: 'text-fuchsia-400' };
+}
+
+/** Categorías del índice europeo de calidad del aire (EAQI). */
+export function airQualityLevel(aqi: number): Level {
+  if (aqi <= 20) return { label: 'buena', color: 'text-emerald-300' };
+  if (aqi <= 40) return { label: 'aceptable', color: 'text-lime-300' };
+  if (aqi <= 60) return { label: 'regular', color: 'text-yellow-300' };
+  if (aqi <= 80) return { label: 'mala', color: 'text-orange-400' };
+  if (aqi <= 100) return { label: 'muy mala', color: 'text-red-400' };
+  return { label: 'pésima', color: 'text-fuchsia-400' };
+}

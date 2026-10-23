@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -13,6 +14,7 @@ from ..schemas.models import CurrentWeather, DailyForecast, HourlyForecast, Weat
 from .base import PollingModule, utcnow
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
+AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 HOURLY_HOURS = 12
 DAILY_DAYS = 5
 
@@ -31,7 +33,12 @@ def _parse_time(value: str | None, tz: ZoneInfo) -> datetime | None:
     return datetime.fromisoformat(value).replace(tzinfo=tz)
 
 
-def parse_forecast(payload: dict[str, Any], location: str) -> WeatherData:
+def parse_air_quality(payload: dict[str, Any]) -> int | None:
+    """Índice europeo de calidad del aire (EAQI) actual."""
+    return _opt_int((payload.get("current") or {}).get("european_aqi"))
+
+
+def parse_forecast(payload: dict[str, Any], location: str, air_quality: int | None = None) -> WeatherData:
     tz = ZoneInfo(payload.get("timezone") or "UTC")
     cur = payload["current"]
     current = CurrentWeather(
@@ -41,6 +48,7 @@ def parse_forecast(payload: dict[str, Any], location: str) -> WeatherData:
         wind_speed=float(cur["wind_speed_10m"]),
         weather_code=int(cur["weather_code"]),
         is_day=bool(cur["is_day"]),
+        european_aqi=air_quality,
     )
 
     # Próximas horas a partir de la hora en curso.
@@ -79,6 +87,7 @@ def parse_forecast(payload: dict[str, Any], location: str) -> WeatherData:
             apparent_temperature_min=_opt_float(daily_value("apparent_temperature_min", i)),
             apparent_temperature_max=_opt_float(daily_value("apparent_temperature_max", i)),
             wind_speed_max=_opt_float(daily_value("wind_speed_10m_max", i)),
+            uv_index_max=_opt_float(daily_value("uv_index_max", i)),
             sunrise=_parse_time(d["sunrise"][i], tz),
             sunset=_parse_time(d["sunset"][i], tz),
         )
@@ -107,12 +116,28 @@ class WeatherModule(PollingModule[WeatherData]):
             "hourly": "temperature_2m,weather_code,precipitation_probability,is_day",
             "daily": (
                 "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,"
-                "apparent_temperature_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset"
+                "apparent_temperature_min,precipitation_probability_max,wind_speed_10m_max,uv_index_max,sunrise,sunset"
             ),
             "timezone": "auto",
             "forecast_days": DAILY_DAYS + 1,  # margen para las 12 h siguientes cerca de medianoche
             "wind_speed_unit": "kmh",
         }
-        response = await self._client.get(API_URL, params=params)
-        response.raise_for_status()
-        return parse_forecast(response.json(), self.location.name)
+        forecast, air_quality = await asyncio.gather(self._client.get(API_URL, params=params), self._fetch_air_quality())
+        forecast.raise_for_status()
+        return parse_forecast(forecast.json(), self.location.name, air_quality)
+
+    async def _fetch_air_quality(self) -> int | None:
+        """Opcional: si falla, el tiempo se muestra igualmente sin este dato."""
+        params = {
+            "latitude": self.location.latitude,
+            "longitude": self.location.longitude,
+            "current": "european_aqi",
+            "timezone": "auto",
+        }
+        try:
+            response = await self._client.get(AIR_QUALITY_URL, params=params)
+            response.raise_for_status()
+            return parse_air_quality(response.json())
+        except (httpx.HTTPError, ValueError) as exc:
+            self.log.warning("Calidad del aire no disponible: %s", exc)
+            return None

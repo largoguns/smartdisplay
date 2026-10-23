@@ -16,7 +16,7 @@ from app.modules.nas import parse_filesystems, parse_system_info
 from app.modules.news import parse_feed
 from app.modules.solar import parse_runtime_data
 from app.modules.spotify import PlayerState, parse_player, select_playback
-from app.modules.weather import parse_forecast
+from app.modules.weather import parse_air_quality, parse_forecast
 from app.schemas.models import AdguardStats, Track
 
 TZ = ZoneInfo("Europe/Madrid")
@@ -127,11 +127,12 @@ def test_weather_parses_open_meteo_payload() -> None:
             "apparent_temperature_max": [23.6] * 6,
             "precipitation_probability_max": [20] * 6,
             "wind_speed_10m_max": [18.0] * 5 + [None],
+            "uv_index_max": [4.25] * 6,
             "sunrise": ["2026-10-06T08:05"] * 6,
             "sunset": ["2026-10-06T19:40"] * 6,
         },
     }
-    data = parse_forecast(payload, "Madrid")
+    data = parse_forecast(payload, "Madrid", parse_air_quality({"current": {"european_aqi": 49}}))
     assert data.location == "Madrid"
     assert data.current.is_day is True
     assert len(data.hourly) == 12
@@ -139,6 +140,9 @@ def test_weather_parses_open_meteo_payload() -> None:
     assert len(data.daily) == 5
     assert data.daily[0].apparent_temperature_max == 23.6
     assert data.daily[0].wind_speed_max == 18.0
+    assert data.daily[0].uv_index_max == 4.25
+    assert data.current.european_aqi == 49
+    assert parse_air_quality({}) is None
 
 
 def _state(account: str, device: str, playing: bool = True) -> PlayerState:
