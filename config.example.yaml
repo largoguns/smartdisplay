@@ -61,7 +61,7 @@ keep:
   master_token: "aas_et/..."      # scripts/keep_token.py
   target_list_title: "La Compra"  # sin distinguir mayúsculas; se ignoran las archivadas si hay otra
   completed_items_shown: 0        # elementos ya marcados a mostrar (0 = solo pendientes)
-  poll_interval_seconds: 300
+  poll_interval_seconds: 60
 
 # 5. NAS (OpenMediaVault)
 omv:

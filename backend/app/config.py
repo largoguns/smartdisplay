@@ -97,7 +97,7 @@ class KeepConfig(_Section):
     master_token: str | None = None
     target_list_title: str = "La Compra"  # sin distinguir mayúsculas
     completed_items_shown: int = Field(default=0, ge=0)  # elementos marcados a mostrar (0 = solo pendientes)
-    poll_interval_seconds: float = Field(default=30, gt=0)
+    poll_interval_seconds: float = Field(default=60, gt=0)
 
 
 class OmvConfig(_Section):
