@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { CloudOff, type LucideIcon } from 'lucide-react';
+import { useNow } from '../hooks/useNow';
+import { timeAgo } from '../lib/format';
 
 interface CardProps {
   title: string;
@@ -39,6 +41,12 @@ export function StaleBadge() {
       Sin actualizar
     </span>
   );
+}
+
+/** Antigüedad de los datos ("hace 3 min"), refrescada cada 30 s. */
+export function UpdatedAgo({ at }: { at: string }) {
+  const now = useNow(30_000);
+  return <span className="text-base text-slate-500">{timeAgo(at, now.getTime())}</span>;
 }
 
 export function Placeholder({ children }: { children: ReactNode }) {

@@ -3,7 +3,7 @@ import { useNow } from '../hooks/useNow';
 import { isStale, usePolling } from '../hooks/usePolling';
 import { formatTime, relativeDayLabel, startOfDay } from '../lib/format';
 import type { CalendarData, CalendarEvent } from '../types/dashboard';
-import { Card, Placeholder, fadeBottom } from './Card';
+import { Card, Placeholder, UpdatedAgo, fadeBottom } from './Card';
 
 interface DayGroup {
   key: number;
@@ -52,7 +52,14 @@ export function CalendarWidget({ className = '' }: { className?: string }) {
   const groups = state.data ? groupByDay(state.data.events, now) : [];
 
   return (
-    <Card title="Agenda" icon={CalendarDays} accent="text-sky-400" stale={isStale(state)} className={className}>
+    <Card
+      title="Agenda"
+      icon={CalendarDays}
+      accent="text-sky-400"
+      stale={isStale(state)}
+      headerRight={state.data && <UpdatedAgo at={state.data.fetched_at} />}
+      className={className}
+    >
       {!state.data ? (
         <Placeholder>Cargando calendario…</Placeholder>
       ) : groups.length === 0 ? (

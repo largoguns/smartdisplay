@@ -4,7 +4,7 @@ import { isStale, usePolling } from '../hooks/usePolling';
 import { capitalize, formatNumber, parseLocalDate, startOfDay } from '../lib/format';
 import { weatherInfo } from '../lib/weather';
 import type { DailyForecast, WeatherData } from '../types/dashboard';
-import { Card, Placeholder } from './Card';
+import { Card, Placeholder, UpdatedAgo } from './Card';
 
 const HOURS_SHOWN = 6;
 /** Solo se muestra la probabilidad de lluvia cuando es relevante. */
@@ -84,7 +84,14 @@ export function WeatherWidget({ index = 0, className = '' }: { index?: number; c
       icon={CloudSun}
       accent="text-amber-300"
       stale={data ? isStale(state) : false}
-      headerRight={data && <LocationTag name={data.location} />}
+      headerRight={
+        data && (
+          <>
+            <UpdatedAgo at={data.fetched_at} />
+            <LocationTag name={data.location} />
+          </>
+        )
+      }
       className={className}
     >
       {/* absolute: el alto medido es el disponible, no el del contenido. */}
